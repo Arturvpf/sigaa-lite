@@ -107,16 +107,62 @@ Usuario 1──0..1 Aluno N──1 Curso 1──N EstruturaCurricular N──1 D
 
 ## Scripts úteis (na raiz)
 
-| Comando                | O que faz                                    |
-| ---------------------- | -------------------------------------------- |
-| `npm run dev`          | Sobe back-end e front-end juntos             |
-| `npm run dev:backend`  | Sobe só a API, com recarregamento automático |
-| `npm run dev:frontend` | Sobe só o front-end                          |
-| `npm test`             | Roda os testes automatizados                 |
-| `npm run lint`         | Analisa o código com ESLint                  |
-| `npm run format`       | Formata o código com Prettier                |
-| `npm run typecheck`    | Verifica os tipos de todos os workspaces     |
-| `npm run build`        | Gera o build de produção dos dois apps       |
+| Comando                | O que faz                                          |
+| ---------------------- | -------------------------------------------------- |
+| `npm run dev`          | Sobe back-end e front-end juntos                   |
+| `npm run dev:backend`  | Sobe só a API, com recarregamento automático       |
+| `npm run dev:frontend` | Sobe só o front-end                                |
+| `npm test`             | Roda todos os testes (unitários + integração)      |
+| `npm run test:unit`    | Roda só os testes unitários (não precisa de banco) |
+| `npm run lint`         | Analisa o código com ESLint                        |
+| `npm run format`       | Formata o código com Prettier                      |
+| `npm run typecheck`    | Verifica os tipos de todos os workspaces           |
+| `npm run build`        | Gera o build de produção dos dois apps             |
+
+> Os testes de integração usam o banco `sigaa_test` (criado pelo docker-compose), então o PostgreSQL precisa estar no ar: `docker compose up -d`. As migrations são aplicadas automaticamente nesse banco antes dos testes, e ele é limpo antes de cada teste — o banco de desenvolvimento nunca é tocado.
+
+## API
+
+Base: `http://localhost:3333`. Rotas autenticadas exigem o cabeçalho `Authorization: Bearer <token>`.
+
+### Autenticação
+
+| Método | Rota          | Body                                  | Resposta                              | Erros                                                   |
+| ------ | ------------- | ------------------------------------- | ------------------------------------- | ------------------------------------------------------- |
+| POST   | `/auth/login` | `{ "username": "ana", "senha"?: "" }` | `200 { token, expiresIn, usuario }`   | 400 `VALIDACAO`, 401 `CREDENCIAIS_INVALIDAS`            |
+| GET    | `/auth/me`    | —                                     | `200 { id, username, perfil, aluno }` | 401 `TOKEN_AUSENTE`, `TOKEN_INVALIDO`, `TOKEN_EXPIRADO` |
+
+`usuario.aluno` é `{ id, nome, curso: { id, nome } }` para alunos e `null` para a secretaria.
+
+### Formato de erro
+
+Todos os erros têm o mesmo formato. O `code` é estável e pode ser usado pelo front-end; a `message` é legível para o usuário; `details` aparece só quando ajuda (ex.: campos inválidos).
+
+```json
+{
+  "code": "VALIDACAO",
+  "message": "Dados de entrada inválidos.",
+  "details": [{ "campo": "username", "mensagem": "Informe o nome de usuário" }]
+}
+```
+
+| Status | Quando                                                    | Exemplos de `code`                                         |
+| ------ | --------------------------------------------------------- | ---------------------------------------------------------- |
+| 400    | Entrada mal formada (tipo, formato, campo faltando, JSON) | `VALIDACAO`, `JSON_INVALIDO`                               |
+| 401    | Não autenticado                                           | `TOKEN_AUSENTE`, `TOKEN_EXPIRADO`, `CREDENCIAIS_INVALIDAS` |
+| 403    | Autenticado, mas com perfil sem acesso                    | `ACESSO_NEGADO`                                            |
+| 404    | Recurso ou rota inexistente                               | `ROTA_NAO_ENCONTRADA`                                      |
+| 409    | Conflito com dados existentes (unicidade)                 | `REGISTRO_DUPLICADO`                                       |
+| 422    | Entrada válida, mas recusada por regra de negócio         | `TURMA_LOTADA` (a partir da Fase 3)                        |
+| 500    | Erro inesperado (sem detalhes internos na resposta)       | `ERRO_INTERNO`                                             |
+
+### Listagens: busca e paginação
+
+Todas as listagens aceitam `?q=<busca>&page=<n>&pageSize=<n>` (padrão `page=1`, `pageSize=10`, máximo `50`) e respondem:
+
+```json
+{ "items": [], "total": 0, "page": 1, "pageSize": 10, "totalPages": 0 }
+```
 
 ## Principais decisões
 
@@ -125,6 +171,48 @@ Usuario 1──0..1 Aluno N──1 Curso 1──N EstruturaCurricular N──1 D
 Escolhi o **Express** por ser minimalista e amplamente conhecido: a organização do código (rotas → controllers → services → repositórios) fica explícita no próprio projeto, em vez de escondida em convenções do framework. Isso deixa cada decisão visível e fácil de explicar. NestJS traria injeção de dependência e decorators que seriam complexidade desnecessária para o tamanho deste sistema.
 
 A aplicação é criada por uma função (`createApp`) separada do `server.ts`, o que permite testar as rotas com **supertest** sem abrir uma porta.
+
+### Organização do código
+
+```
+apps/backend/src/
+├── app.ts               # raiz de composição: cria repositórios, services e rotas
+├── server.ts            # sobe o servidor HTTP
+├── config/env.ts        # variáveis de ambiente validadas
+├── database/prisma.ts   # client do Prisma
+├── modules/<domínio>/   # um módulo por domínio (auth, aluno, secretaria...)
+│   ├── *.routes.ts      # rotas e middlewares de acesso
+│   ├── *.controller.ts  # HTTP ⇄ service: valida a entrada e devolve a resposta
+│   ├── *.service.ts     # regras de negócio
+│   ├── *.repository.ts  # consultas ao banco
+│   └── *.schemas.ts     # schemas Zod da entrada
+└── shared/              # erros, validação, paginação, autenticação
+```
+
+As **regras de negócio ficam nos services**, nunca nos controllers. Os services recebem as dependências por parâmetro (funções fábrica `createXxx`), sem framework de injeção de dependência: em teste, basta passar outras implementações.
+
+### Autenticação: JWT sem estado
+
+O login é por nome de usuário (a senha é opcional, como pede o enunciado). A API devolve um **JWT assinado com HS256** e validade curta (1h por padrão, configurável em `JWT_EXPIRES_IN_SECONDS`) contendo o id do usuário, o perfil e, para alunos, o id do aluno.
+
+- O token vai no cabeçalho `Authorization` (não em cookie), o que evita CSRF. Sem sessão no servidor, a API continua sem estado.
+- **O aluno é sempre identificado pelo token**, nunca pelo corpo nem pela URL (regra 9). Não existe rota que receba o id do aluno.
+- Se um usuário tiver senha cadastrada, ela é exigida e verificada com **scrypt** (nativo do Node). Os usuários do seed não têm senha.
+- Usuário inexistente e senha errada recebem a **mesma resposta**, para não revelar quais usuários existem.
+- Guards: `authenticate` (401) e `requirePerfil('ALUNO' | 'SECRETARIA')` (403).
+
+### Códigos HTTP
+
+Separei **400** (a requisição está mal formada) de **422** (a requisição é válida, mas uma regra de negócio a recusa, como turma lotada). Assim o front-end sabe se o problema é no formulário ou na situação. Conflitos de unicidade (código de disciplina ou e-mail repetido) usam **409**.
+
+### Segurança
+
+- CORS restrito à origem do front-end (`CORS_ORIGIN`);
+- cabeçalhos de segurança com `helmet`;
+- segredos apenas no `.env` (fora do git); a API não sobe sem um `JWT_SECRET` de pelo menos 32 caracteres;
+- consultas via Prisma (parametrizadas), sem SQL concatenado;
+- corpo das requisições limitado a 100 kB e `pageSize` limitado a 50;
+- erros inesperados não expõem detalhes internos.
 
 ### Banco de dados: PostgreSQL
 
@@ -150,11 +238,14 @@ A API também valida tudo isso e devolve erros de negócio claros; o banco é a 
 
 ### Validação: Zod
 
-O **Zod** valida tanto as variáveis de ambiente (a API falha cedo se algo estiver errado) quanto, nas próximas fases, os dados de entrada das rotas, gerando os tipos TypeScript a partir dos próprios schemas.
+O **Zod** valida as variáveis de ambiente (a API não sobe se algo estiver errado) e a entrada de todas as rotas (body e query string), gerando os tipos TypeScript a partir dos próprios schemas. A validação é centralizada na função `parse`, que transforma qualquer falha em `400 VALIDACAO` com a lista de campos.
 
 ### Testes: Vitest + supertest
 
-O **Vitest** é rápido, tem suporte nativo a TypeScript/ESM e API compatível com Jest. O **supertest** permite testar a API de ponta a ponta (HTTP → banco).
+O **Vitest** é rápido, tem suporte nativo a TypeScript/ESM e API compatível com Jest. Os testes são divididos em dois projetos:
+
+- **unit** (`tests/unit`): funções puras e peças isoladas, sem banco;
+- **integration** (`tests/integration`): a API real via **supertest**, ligada ao PostgreSQL no banco `sigaa_test`. Cada teste começa com o banco vazio e cria só os dados de que precisa, então os testes não dependem uns dos outros nem do seed.
 
 ### Front-end: React + Vite + TypeScript
 
@@ -166,7 +257,7 @@ O **Vite** oferece build e recarregamento rápidos com configuração mínima.
 | ---- | ---------------------------- | ------------ |
 | 0    | Setup do monorepo            | ✅ Concluída |
 | 1    | Modelagem de dados e seed    | ✅ Concluída |
-| 2    | Autenticação e base da API   | ⏳ A fazer   |
+| 2    | Autenticação e base da API   | ✅ Concluída |
 | 3    | Fluxo do aluno (back-end)    | ⏳ A fazer   |
 | 4    | Testes das regras de negócio | ⏳ A fazer   |
 | 5    | Front-end base               | ⏳ A fazer   |
