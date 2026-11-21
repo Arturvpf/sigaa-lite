@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadEnv } from '../src/config/env.js';
+import { loadEnv } from '../../src/config/env.js';
 
 const DATABASE_URL = 'postgresql://sigaa:sigaa@localhost:5432/sigaa';
 
