@@ -12,7 +12,8 @@ Sistema de matrícula de graduação com dois perfis de acesso — **Secretaria*
 ```
 sigaa-lite/
 ├── apps/
-│   ├── backend/      # API REST (Express + TypeScript)
+│   ├── backend/      # API REST (Express + TypeScript + Prisma)
+│   │   └── prisma/   # schema, migrations e seed
 │   └── frontend/     # SPA (React + Vite + TypeScript)
 ├── docker/           # Scripts de inicialização do PostgreSQL
 ├── docker-compose.yml
@@ -41,11 +42,68 @@ cp apps/frontend/.env.example apps/frontend/.env
 # 3. Subir o banco de dados
 docker compose up -d
 
-# 4. Rodar back-end (http://localhost:3333) e front-end (http://localhost:5173)
+# 4. Criar as tabelas (migrations) e carregar os dados iniciais (seed)
+npm run db:migrate
+npm run db:seed
+
+# 5. Rodar back-end (http://localhost:3333) e front-end (http://localhost:5173)
 npm run dev
 ```
 
 > No PowerShell, use `Copy-Item` no lugar de `cp`.
+>
+> O `npm install` já gera o Prisma Client (`postinstall`). Para recomeçar do zero a qualquer momento: `npm run db:reset` (apaga o banco, reaplica as migrations e roda o seed).
+
+## Usuários do seed
+
+O login é feito apenas pelo nome de usuário (a senha é opcional e os usuários do seed não têm senha).
+
+| Usuário      | Perfil     | Curso                    | Cenário que exercita                                                                    |
+| ------------ | ---------- | ------------------------ | --------------------------------------------------------------------------------------- |
+| `secretaria` | Secretaria | —                        | Cadastros de disciplinas, professores e turmas                                          |
+| `ana`        | Aluno      | Ciência da Computação    | 165h de eletiva de perfil (exige 120h): **45h excedentes contam como livre**            |
+| `bruno`      | Aluno      | Ciência da Computação    | Recursa IF669 (reprovado); ocupa uma das 2 vagas da turma lotada de IF676               |
+| `carla`      | Aluno      | Engenharia da Computação | Mesmas disciplinas da Ana com outra classificação (IF671 é perfil, IF677 é livre)       |
+| `diego`      | Aluno      | Engenharia da Computação | Calouro sem histórico (progresso zerado)                                                |
+| `eduarda`    | Aluno      | Engenharia da Computação | Quase formada: obrigatórias e perfil completas, livre acima do exigido (limite de 100%) |
+
+### Dados de exemplo
+
+- **Cursos:** Ciência da Computação (CC) e Engenharia da Computação (EC), ambos exigindo 360h obrigatórias, 120h de eletiva de perfil e 60h de eletiva livre.
+- **Disciplinas compartilhadas com classificação diferente:** IF671 e IF672 são obrigatórias em CC e eletivas de perfil em EC; IF673 é eletiva de perfil em CC e obrigatória em EC; IF677 e IF678 estão só em CC, e IF674 só em EC (eletiva livre para o outro curso).
+- **Fora das duas estruturas (sempre eletiva livre):** CT001, LE500 e HU100.
+- **Turmas:** 12 turmas no semestre; **IF676 está lotada** (2/2) e **IF678 tem uma única vaga** (2/3).
+
+## Modelo de dados
+
+```
+Usuario 1──0..1 Aluno N──1 Curso 1──N EstruturaCurricular N──1 Disciplina
+                  │                                                 │
+                  ├──N HistoricoItem N──────────────────────────────┤
+                  │                                                 │
+                  └──N Matricula N──1 Turma N──1 Professor          │
+                                        └──────N──1─────────────────┘
+```
+
+| Entidade              | Restrições principais                                                                     |
+| --------------------- | ----------------------------------------------------------------------------------------- |
+| `Usuario`             | `username` único; perfil `SECRETARIA` ou `ALUNO`; senha opcional                          |
+| `Curso`               | CH mínima por grupo (obrigatória, eletiva de perfil, eletiva livre), nunca negativa       |
+| `Disciplina`          | `codigo` único (regra 1); CH múltipla de 15 entre 15 e 120 (regra 2)                      |
+| `EstruturaCurricular` | Chave primária `(curso, disciplina)`; tipo `OBRIGATORIA` ou `ELETIVA_PERFIL`              |
+| `Professor`           | `email` único (regra 3)                                                                   |
+| `Turma`               | Disciplina e professor obrigatórios; `vagas >= 1` (regra 4)                               |
+| `Aluno`               | Pertence a um curso e a um usuário                                                        |
+| `Matricula`           | Situação `ATIVA` ou `CANCELADA`; **no máximo uma matrícula ativa por (aluno, turma)**     |
+| `HistoricoItem`       | Situação `APROVADO` ou `REPROVADO`, com semestre; único por (aluno, disciplina, semestre) |
+
+## Scripts de banco (na raiz)
+
+| Comando              | O que faz                                                           |
+| -------------------- | ------------------------------------------------------------------- |
+| `npm run db:migrate` | Aplica as migrations pendentes (`prisma migrate deploy`)            |
+| `npm run db:seed`    | Apaga os dados e recarrega o seed (pode ser executado várias vezes) |
+| `npm run db:reset`   | Recria o banco do zero: migrations + seed                           |
 
 ## Scripts úteis (na raiz)
 
@@ -72,6 +130,24 @@ A aplicação é criada por uma função (`createApp`) separada do `server.ts`, 
 
 O **PostgreSQL** oferece transações e locks de linha (`SELECT ... FOR UPDATE`), necessários para tratar com segurança a concorrência na última vaga de uma turma. Ele roda via Docker Compose, então não é preciso instalar nada além do Docker. Um segundo banco (`sigaa_test`) é criado automaticamente para os testes de integração, isolado dos dados de desenvolvimento.
 
+### ORM: Prisma
+
+O **Prisma** gera tipos TypeScript a partir do schema e mantém o histórico de migrations versionado. Uso o driver `pg` via adapter oficial (`@prisma/adapter-pg`), padrão do Prisma 7.
+
+**Regras de integridade no banco, não só na API.** Algumas restrições não podem ser expressas no `schema.prisma`, então foram escritas em SQL na migration inicial:
+
+- `CHECK` da CH da disciplina (múltipla de 15, entre 15 e 120) e de `vagas >= 1`;
+- **índice único parcial** `(aluno_id, turma_id) WHERE situacao = 'ATIVA'`: impede matrícula duplicada mesmo sob concorrência, mas permite que o aluno se matricule de novo numa turma da qual tinha cancelado;
+- `CHECK` que amarra `cancelada_em` à situação `CANCELADA`.
+
+A API também valida tudo isso e devolve erros de negócio claros; o banco é a última linha de defesa.
+
+**Vagas ocupadas = contagem de matrículas ativas**, sem um contador na tabela de turmas. Assim não existe um número que possa ficar dessincronizado: cancelar uma matrícula devolve a vaga automaticamente (regra 8). Para evitar que duas matrículas simultâneas ocupem a última vaga, a matrícula será feita numa transação que trava a linha da turma (`SELECT ... FOR UPDATE`) antes de contar — detalhado na Fase 3.
+
+**Matrículas canceladas não são apagadas**: ficam com situação `CANCELADA` e data de cancelamento, preservando o histórico.
+
+**IDs inteiros autoincrementais**, mais simples de ler e depurar. Como o aluno é sempre identificado pelo token (nunca pela URL ou corpo), um id sequencial não permite acessar dados de outro aluno.
+
 ### Validação: Zod
 
 O **Zod** valida tanto as variáveis de ambiente (a API falha cedo se algo estiver errado) quanto, nas próximas fases, os dados de entrada das rotas, gerando os tipos TypeScript a partir dos próprios schemas.
@@ -89,7 +165,7 @@ O **Vite** oferece build e recarregamento rápidos com configuração mínima.
 | Fase | Descrição                    | Status       |
 | ---- | ---------------------------- | ------------ |
 | 0    | Setup do monorepo            | ✅ Concluída |
-| 1    | Modelagem de dados e seed    | ⏳ A fazer   |
+| 1    | Modelagem de dados e seed    | ✅ Concluída |
 | 2    | Autenticação e base da API   | ⏳ A fazer   |
 | 3    | Fluxo do aluno (back-end)    | ⏳ A fazer   |
 | 4    | Testes das regras de negócio | ⏳ A fazer   |

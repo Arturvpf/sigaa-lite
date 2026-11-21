@@ -1,6 +1,9 @@
 # Dependências
 node_modules/
 
+# Código gerado (Prisma Client é gerado a partir do schema)
+apps/backend/src/generated/
+
 # Builds
 dist/
 build/

@@ -1,0 +1,165 @@
+// Modelo de dados do SIGAA Lite.
+// Regras que o Prisma não consegue expressar (CHECKs e índice único parcial)
+// ficam em SQL na migration inicial — ver prisma/migrations.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Perfil {
+  SECRETARIA
+  ALUNO
+}
+
+enum TipoDisciplina {
+  OBRIGATORIA
+  ELETIVA_PERFIL
+}
+
+enum SituacaoMatricula {
+  ATIVA
+  CANCELADA
+}
+
+enum SituacaoHistorico {
+  APROVADO
+  REPROVADO
+}
+
+/// Conta de acesso. A senha é opcional (login apenas por nome de usuário).
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  perfil    Perfil
+  senhaHash String?  @map("senha_hash")
+  criadoEm  DateTime @default(now()) @map("criado_em")
+
+  aluno Aluno?
+
+  @@map("usuarios")
+}
+
+/// Curso com a carga horária mínima exigida em cada grupo.
+model Curso {
+  id              Int    @id @default(autoincrement())
+  nome            String @unique
+  chObrigatoria   Int    @map("ch_obrigatoria")
+  chEletivaPerfil Int    @map("ch_eletiva_perfil")
+  chEletivaLivre  Int    @map("ch_eletiva_livre")
+
+  estrutura EstruturaCurricular[]
+  alunos    Aluno[]
+
+  @@map("cursos")
+}
+
+/// Regra 1: código único. Regra 2: CH múltipla de 15 entre 15 e 120 (CHECK na migration).
+model Disciplina {
+  id     Int    @id @default(autoincrement())
+  codigo String @unique
+  nome   String
+  ch     Int
+
+  estruturas EstruturaCurricular[]
+  turmas     Turma[]
+  historico  HistoricoItem[]
+
+  @@map("disciplinas")
+}
+
+/// Classificação de uma disciplina na estrutura de um curso.
+/// Disciplinas fora da estrutura contam como eletiva livre (regra 10).
+model EstruturaCurricular {
+  cursoId      Int            @map("curso_id")
+  disciplinaId Int            @map("disciplina_id")
+  tipo         TipoDisciplina
+
+  curso      Curso      @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  disciplina Disciplina @relation(fields: [disciplinaId], references: [id], onDelete: Restrict)
+
+  @@id([cursoId, disciplinaId])
+  @@map("estruturas_curriculares")
+}
+
+/// Regra 3: e-mail único.
+model Professor {
+  id    Int    @id @default(autoincrement())
+  nome  String
+  email String @unique
+
+  turmas Turma[]
+
+  @@map("professores")
+}
+
+/// Oferta de uma disciplina no semestre corrente.
+/// Regra 4: disciplina e professor obrigatórios e vagas >= 1 (CHECK na migration).
+/// As vagas ocupadas são calculadas pela contagem de matrículas ATIVAS (sem contador).
+model Turma {
+  id           Int @id @default(autoincrement())
+  disciplinaId Int @map("disciplina_id")
+  professorId  Int @map("professor_id")
+  vagas        Int
+
+  disciplina Disciplina  @relation(fields: [disciplinaId], references: [id], onDelete: Restrict)
+  professor  Professor   @relation(fields: [professorId], references: [id], onDelete: Restrict)
+  matriculas Matricula[]
+
+  @@index([disciplinaId])
+  @@map("turmas")
+}
+
+/// Todo aluno pertence a um curso e tem uma conta de usuário.
+model Aluno {
+  id        Int    @id @default(autoincrement())
+  usuarioId Int    @unique @map("usuario_id")
+  cursoId   Int    @map("curso_id")
+  nome      String
+
+  usuario    Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  curso      Curso           @relation(fields: [cursoId], references: [id], onDelete: Restrict)
+  matriculas Matricula[]
+  historico  HistoricoItem[]
+
+  @@map("alunos")
+}
+
+/// Vínculo de um aluno com uma turma do semestre.
+/// Só pode existir uma matrícula ATIVA por (aluno, turma) — índice único parcial na migration.
+/// Matrículas canceladas são mantidas para auditoria.
+model Matricula {
+  id          Int               @id @default(autoincrement())
+  alunoId     Int               @map("aluno_id")
+  turmaId     Int               @map("turma_id")
+  situacao    SituacaoMatricula @default(ATIVA)
+  criadaEm    DateTime          @default(now()) @map("criada_em")
+  canceladaEm DateTime?         @map("cancelada_em")
+
+  aluno Aluno @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+  turma Turma @relation(fields: [turmaId], references: [id], onDelete: Restrict)
+
+  @@index([turmaId, situacao])
+  @@index([alunoId, situacao])
+  @@map("matriculas")
+}
+
+/// Disciplinas cursadas em semestres anteriores.
+model HistoricoItem {
+  id           Int               @id @default(autoincrement())
+  alunoId      Int               @map("aluno_id")
+  disciplinaId Int               @map("disciplina_id")
+  semestre     String
+  situacao     SituacaoHistorico
+
+  aluno      Aluno      @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+  disciplina Disciplina @relation(fields: [disciplinaId], references: [id], onDelete: Restrict)
+
+  /// O mesmo aluno não cursa a mesma disciplina duas vezes no mesmo semestre.
+  @@unique([alunoId, disciplinaId, semestre], map: "historico_itens_aluno_disciplina_semestre_key")
+  @@map("historico_itens")
+}
