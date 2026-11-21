@@ -25,7 +25,8 @@ export function createAuthService(deps: { usuarios: UsuarioRepository; tokens: T
 
       // Senha é opcional no sistema; se o usuário tiver uma, ela é obrigatória no login
       if (usuario.senhaHash) {
-        const senhaConfere = senha !== undefined && (await verifyPassword(senha, usuario.senhaHash));
+        const senhaConfere =
+          senha !== undefined && (await verifyPassword(senha, usuario.senhaHash));
         if (!senhaConfere) throw credenciaisInvalidas();
       }
 

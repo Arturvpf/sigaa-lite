@@ -23,11 +23,11 @@ export function createTokenService(options: {
 
   return {
     sign(user) {
-      const token = jwt.sign(
-        { perfil: user.perfil, alunoId: user.alunoId },
-        secret,
-        { subject: String(user.usuarioId), algorithm: 'HS256', expiresIn: expiresInSeconds },
-      );
+      const token = jwt.sign({ perfil: user.perfil, alunoId: user.alunoId }, secret, {
+        subject: String(user.usuarioId),
+        algorithm: 'HS256',
+        expiresIn: expiresInSeconds,
+      });
       return { token, expiresIn: expiresInSeconds };
     },
 
@@ -37,7 +37,10 @@ export function createTokenService(options: {
         decoded = jwt.verify(token, secret, { algorithms: ['HS256'] });
       } catch (error) {
         if (error instanceof jwt.TokenExpiredError) {
-          throw new UnauthorizedError('TOKEN_EXPIRADO', 'Sua sessão expirou. Faça login novamente.');
+          throw new UnauthorizedError(
+            'TOKEN_EXPIRADO',
+            'Sua sessão expirou. Faça login novamente.',
+          );
         }
         throw new UnauthorizedError('TOKEN_INVALIDO', 'Token de acesso inválido.');
       }
