@@ -159,6 +159,7 @@ model HistoricoItem {
   aluno      Aluno      @relation(fields: [alunoId], references: [id], onDelete: Cascade)
   disciplina Disciplina @relation(fields: [disciplinaId], references: [id], onDelete: Restrict)
 
-  @@index([alunoId])
+  /// O mesmo aluno não cursa a mesma disciplina duas vezes no mesmo semestre.
+  @@unique([alunoId, disciplinaId, semestre], map: "historico_itens_aluno_disciplina_semestre_key")
   @@map("historico_itens")
 }
