@@ -134,6 +134,50 @@ Base: `http://localhost:3333`. Rotas autenticadas exigem o cabeçalho `Authoriza
 
 `usuario.aluno` é `{ id, nome, curso: { id, nome } }` para alunos e `null` para a secretaria.
 
+### Aluno
+
+Todas exigem token de um usuário com perfil `ALUNO` (401 sem token, 403 com outro perfil). **O aluno é sempre o do token**: nenhuma rota recebe o id do aluno.
+
+| Método | Rota                    | Entrada               | Resposta                                                   | Erros de negócio                                                                                                                                |
+| ------ | ----------------------- | --------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/aluno/ofertas`        | `?q=&page=&pageSize=` | `200` página de ofertas (abaixo)                           | —                                                                                                                                               |
+| POST   | `/aluno/matriculas`     | `{ "turmaId": 1 }`    | `201 { id }`                                               | 404 `TURMA_NAO_ENCONTRADA`, 422 `TURMA_LOTADA`, 422 `DISCIPLINA_JA_APROVADA`, 409 `JA_MATRICULADO_NA_TURMA`, 422 `JA_MATRICULADO_NA_DISCIPLINA` |
+| GET    | `/aluno/matriculas`     | —                     | `200 [{ id, criadaEm, turma, classificacao }]` (só ativas) | —                                                                                                                                               |
+| DELETE | `/aluno/matriculas/:id` | —                     | `204`                                                      | 404 `MATRICULA_NAO_ENCONTRADA`, 422 `MATRICULA_JA_CANCELADA`                                                                                    |
+| GET    | `/aluno/progresso`      | —                     | `200 { curso, grupos }`                                    | —                                                                                                                                               |
+
+Cada **oferta** traz:
+
+```json
+{
+  "id": 7,
+  "disciplina": { "id": 9, "codigo": "IF676", "nome": "Inteligência Artificial", "ch": 60 },
+  "professor": { "id": 2, "nome": "Ricardo Alves" },
+  "vagas": 2,
+  "vagasOcupadas": 2,
+  "vagasDisponiveis": 0,
+  "lotada": true,
+  "classificacao": "ELETIVA_PERFIL",
+  "matriculaId": null,
+  "jaAprovado": false
+}
+```
+
+`classificacao` é `OBRIGATORIA`, `ELETIVA_PERFIL` ou `ELETIVA_LIVRE` **para o curso do aluno logado**; `matriculaId` é a matrícula ativa do aluno nessa turma (ou `null`); `jaAprovado` indica que ele não pode se matricular.
+
+Cada **grupo** do progresso traz:
+
+```json
+{
+  "grupo": "ELETIVA_PERFIL",
+  "chExigida": 120,
+  "chIntegralizada": 120,
+  "chEmCurso": 0,
+  "chFaltante": 0,
+  "percentual": 100
+}
+```
+
 ### Formato de erro
 
 Todos os erros têm o mesmo formato. O `code` é estável e pode ser usado pelo front-end; a `message` é legível para o usuário; `details` aparece só quando ajuda (ex.: campos inválidos).
@@ -151,9 +195,9 @@ Todos os erros têm o mesmo formato. O `code` é estável e pode ser usado pelo 
 | 400    | Entrada mal formada (tipo, formato, campo faltando, JSON) | `VALIDACAO`, `JSON_INVALIDO`                               |
 | 401    | Não autenticado                                           | `TOKEN_AUSENTE`, `TOKEN_EXPIRADO`, `CREDENCIAIS_INVALIDAS` |
 | 403    | Autenticado, mas com perfil sem acesso                    | `ACESSO_NEGADO`                                            |
-| 404    | Recurso ou rota inexistente                               | `ROTA_NAO_ENCONTRADA`                                      |
-| 409    | Conflito com dados existentes (unicidade)                 | `REGISTRO_DUPLICADO`                                       |
-| 422    | Entrada válida, mas recusada por regra de negócio         | `TURMA_LOTADA` (a partir da Fase 3)                        |
+| 404    | Recurso ou rota inexistente                               | `ROTA_NAO_ENCONTRADA`, `TURMA_NAO_ENCONTRADA`              |
+| 409    | Conflito com dados existentes (duplicidade)               | `REGISTRO_DUPLICADO`, `JA_MATRICULADO_NA_TURMA`            |
+| 422    | Entrada válida, mas recusada por regra de negócio         | `TURMA_LOTADA`, `DISCIPLINA_JA_APROVADA`                   |
 | 500    | Erro inesperado (sem detalhes internos na resposta)       | `ERRO_INTERNO`                                             |
 
 ### Listagens: busca e paginação
@@ -230,11 +274,40 @@ O **Prisma** gera tipos TypeScript a partir do schema e mantém o histórico de 
 
 A API também valida tudo isso e devolve erros de negócio claros; o banco é a última linha de defesa.
 
-**Vagas ocupadas = contagem de matrículas ativas**, sem um contador na tabela de turmas. Assim não existe um número que possa ficar dessincronizado: cancelar uma matrícula devolve a vaga automaticamente (regra 8). Para evitar que duas matrículas simultâneas ocupem a última vaga, a matrícula será feita numa transação que trava a linha da turma (`SELECT ... FOR UPDATE`) antes de contar — detalhado na Fase 3.
+**Vagas ocupadas = contagem de matrículas ativas**, sem um contador na tabela de turmas. Assim não existe um número que possa ficar dessincronizado: cancelar uma matrícula devolve a vaga automaticamente (regra 8). A concorrência na última vaga é tratada na matrícula (abaixo).
 
 **Matrículas canceladas não são apagadas**: ficam com situação `CANCELADA` e data de cancelamento, preservando o histórico.
 
 **IDs inteiros autoincrementais**, mais simples de ler e depurar. Como o aluno é sempre identificado pelo token (nunca pela URL ou corpo), um id sequencial não permite acessar dados de outro aluno.
+
+### Matrícula e concorrência na última vaga
+
+Toda a matrícula acontece **numa transação que começa travando a linha da turma** (`SELECT ... FOR UPDATE`). Se dois alunos tentam a última vaga ao mesmo tempo, o segundo espera o primeiro terminar e, ao contar as matrículas ativas, já enxerga a vaga ocupada — e recebe `TURMA_LOTADA`.
+
+Como isso é testado: disparar requisições simultâneas raramente acerta a janela exata da corrida, então um teste assim passaria mesmo sem o lock (verifiquei). Por isso há um **teste determinístico**: o próprio teste abre uma transação que trava a turma e ocupa a última vaga sem confirmar; a matrícula pela API precisa esperar e, depois, receber `TURMA_LOTADA`. Removendo o `FOR UPDATE`, esse teste falha (a API aceita a matrícula). Há também um teste com 6 matrículas simultâneas numa turma de 1 vaga como verificação ponta a ponta.
+
+Escolhi o lock de linha em vez de um contador com update condicional porque as vagas são **calculadas** (contagem de matrículas ativas), então não há uma coluna para atualizar condicionalmente. O lock é só da turma em questão: matrículas em turmas diferentes não se bloqueiam.
+
+Ordem das verificações, dentro da transação: turma existe (404) → disciplina já aprovada (422) → já matriculado nesta turma (409) ou em outra turma da mesma disciplina (422) → turma lotada (422). Assim, quem já está matriculado numa turma lotada recebe a mensagem certa ("já matriculado"), e não "turma lotada".
+
+Decisões:
+
+- **Reprovado pode, aprovado não** (regra 7): só um item `APROVADO` no histórico bloqueia a matrícula.
+- **Não permito duas turmas da mesma disciplina ao mesmo tempo**: não faz sentido cursar a mesma disciplina duas vezes no semestre, e isso contaria a CH em dobro no progresso.
+- **Já matriculado na turma responde 409** (conflito: o recurso já existe); as demais recusas são **422** (regra de negócio).
+- **Cancelar = `DELETE /aluno/matriculas/:id` → 204.** Para o aluno, a matrícula deixa de existir entre as ativas; no banco ela vira `CANCELADA` com a data, e a vaga volta automaticamente porque só as ativas são contadas (regra 8). O cancelamento é um update condicional (`WHERE situacao = 'ATIVA'`), então dois cancelamentos simultâneos não "devolvem" a vaga duas vezes.
+- **Matrícula de outro aluno responde 404**, igual a uma inexistente, em vez de 403: assim a API não revela que aquele id existe (regra 9). A busca já é filtrada pelo aluno do token.
+- `GET /aluno/matriculas` **não é paginada**: um aluno tem poucas matrículas no semestre.
+
+### Progresso: função pura
+
+O cálculo fica em [`progresso.ts`](apps/backend/src/modules/aluno/progresso.ts), uma **função pura** que recebe a CH exigida do curso, a estrutura curricular, as disciplinas aprovadas e as em curso. Sem banco e sem efeitos colaterais, as regras 10 a 13 são testadas diretamente, com casos pequenos e legíveis.
+
+- **Classificação** (regra 10): pela estrutura do curso do aluno; fora da estrutura é eletiva livre.
+- **Só aprovadas integralizam** (regra 12); matrículas ativas aparecem em `chEmCurso` e **não reduzem** `chFaltante`, que é o que ainda precisa ser aprovado.
+- **Excedente de perfil vira livre** (regra 11). Decidi aplicar o mesmo à CH em curso: se o aluno já integralizou 90h de 120h de perfil e está cursando 60h de perfil, 30h aparecem como perfil em curso e 30h como livre em curso — que é como elas vão contar quando forem aprovadas.
+- **Limites** (regra 13): `chFaltante = max(0, exigida − integralizada)` e `percentual = min(100, ⌊integralizada / exigida × 100⌋)`. `chIntegralizada` mostra o valor real (pode passar do exigido); só o percentual é limitado. Arredondo **para baixo** para não exibir 100% antes de o grupo estar completo.
+- Uma disciplina aprovada mais de uma vez no histórico conta uma vez só.
 
 ### Validação: Zod
 
@@ -258,7 +331,7 @@ O **Vite** oferece build e recarregamento rápidos com configuração mínima.
 | 0    | Setup do monorepo            | ✅ Concluída |
 | 1    | Modelagem de dados e seed    | ✅ Concluída |
 | 2    | Autenticação e base da API   | ✅ Concluída |
-| 3    | Fluxo do aluno (back-end)    | ⏳ A fazer   |
+| 3    | Fluxo do aluno (back-end)    | ✅ Concluída |
 | 4    | Testes das regras de negócio | ⏳ A fazer   |
 | 5    | Front-end base               | ⏳ A fazer   |
 | 6    | Front-end do aluno           | ⏳ A fazer   |

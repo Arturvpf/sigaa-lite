@@ -3,6 +3,9 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import type { Env } from './config/env.js';
 import type { PrismaClient } from './generated/prisma/client.js';
+import { createAlunoRepository } from './modules/aluno/aluno.repository.js';
+import { createAlunoRoutes } from './modules/aluno/aluno.routes.js';
+import { createAlunoService } from './modules/aluno/aluno.service.js';
 import { createAuthRoutes } from './modules/auth/auth.routes.js';
 import { createAuthService } from './modules/auth/auth.service.js';
 import { createUsuarioRepository } from './modules/auth/usuario.repository.js';
@@ -25,6 +28,7 @@ export function createApp({ env, prisma }: AppDeps): Express {
   });
 
   const authService = createAuthService({ usuarios: createUsuarioRepository(prisma), tokens });
+  const alunoService = createAlunoService({ repo: createAlunoRepository(prisma) });
 
   const app = express();
 
@@ -37,6 +41,7 @@ export function createApp({ env, prisma }: AppDeps): Express {
     res.json({ status: 'ok' });
   });
   app.use('/auth', createAuthRoutes({ service: authService, tokens }));
+  app.use('/aluno', createAlunoRoutes({ service: alunoService, tokens }));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
