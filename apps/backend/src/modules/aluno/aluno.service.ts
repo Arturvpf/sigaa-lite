@@ -120,7 +120,10 @@ export function createAlunoService(deps: { repo: AlunoRepository }) {
           turma.disciplinaId,
         );
         if (matriculaExistente?.turmaId === turmaId) {
-          throw new ConflictError('JA_MATRICULADO_NA_TURMA', 'Você já está matriculado nesta turma.');
+          throw new ConflictError(
+            'JA_MATRICULADO_NA_TURMA',
+            'Você já está matriculado nesta turma.',
+          );
         }
         if (matriculaExistente) {
           throw new BusinessRuleError(

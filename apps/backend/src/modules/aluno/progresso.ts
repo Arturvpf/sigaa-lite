@@ -97,6 +97,7 @@ function grupo(
     chEmCurso: emCurso[nome],
     chFaltante: Math.max(0, chExigida - chIntegralizada),
     // Arredonda para baixo: 99,6% não deve aparecer como 100% concluído
-    percentual: chExigida === 0 ? 100 : Math.min(100, Math.floor((chIntegralizada / chExigida) * 100)),
+    percentual:
+      chExigida === 0 ? 100 : Math.min(100, Math.floor((chIntegralizada / chExigida) * 100)),
   };
 }
