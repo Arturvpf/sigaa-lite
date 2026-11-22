@@ -1,6 +1,9 @@
 import { Navigate, type RouteObject } from 'react-router';
 import { RedirecionarParaArea, RequirePerfil } from './auth/guards';
 import { AppLayout } from './layouts/AppLayout';
+import { MatriculasPage } from './pages/aluno/MatriculasPage';
+import { OfertasPage } from './pages/aluno/OfertasPage';
+import { ProgressoPage } from './pages/aluno/ProgressoPage';
 import { EmConstrucao } from './pages/EmConstrucao';
 import { LoginPage } from './pages/LoginPage';
 import { NaoEncontrada } from './pages/NaoEncontrada';
@@ -29,9 +32,9 @@ export const routes: RouteObject[] = [
         ),
         children: [
           { index: true, element: <Navigate to="ofertas" replace /> },
-          { path: 'ofertas', element: <EmConstrucao titulo="Ofertas" /> },
-          { path: 'matriculas', element: <EmConstrucao titulo="Minhas matrículas" /> },
-          { path: 'progresso', element: <EmConstrucao titulo="Progresso" /> },
+          { path: 'ofertas', element: <OfertasPage /> },
+          { path: 'matriculas', element: <MatriculasPage /> },
+          { path: 'progresso', element: <ProgressoPage /> },
         ],
       },
     ],
