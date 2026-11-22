@@ -30,6 +30,12 @@ export default tseslint.config(
   },
 
   {
+    // Fast refresh não se aplica a arquivos de teste
+    files: ['apps/frontend/src/test/**', 'apps/frontend/src/**/*.test.{ts,tsx}'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
+
+  {
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
