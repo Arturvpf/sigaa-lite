@@ -1,15 +1,45 @@
-import { act, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { api } from '../api/client';
-import { renderApp, respostaJson, sessaoAluno, sessaoSecretaria } from '../test/render-app';
+import {
+  renderApp,
+  respostaJson,
+  sessaoAluno,
+  sessaoSecretaria,
+  simularApi,
+} from '../test/render-app';
 import { sessaoStorage } from './session';
 
 const fetchMock = vi.fn<typeof fetch>();
 
+/** Respostas mínimas das telas do aluno, para as rotas carregarem. */
+const apiAluno = {
+  'GET /aluno/ofertas': respostaJson(200, {
+    items: [],
+    total: 0,
+    page: 1,
+    pageSize: 10,
+    totalPages: 0,
+  }),
+  'GET /aluno/matriculas': respostaJson(200, []),
+  'GET /aluno/progresso': respostaJson(200, {
+    curso: { id: 1, nome: 'Ciência da Computação' },
+    grupos: [],
+  }),
+};
+
+const loginAluno = {
+  'POST /auth/login': respostaJson(200, {
+    token: 'novo-token',
+    expiresIn: 3600,
+    usuario: sessaoAluno.usuario,
+  }),
+};
+
 beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
   fetchMock.mockReset();
+  simularApi(fetchMock, apiAluno);
 });
 
 describe('guardas de rota', () => {
@@ -39,7 +69,7 @@ describe('guardas de rota', () => {
   it('com o perfil certo, mostra a área com o nome do usuário', async () => {
     renderApp('/aluno/progresso', { sessao: sessaoAluno });
 
-    expect(await screen.findByRole('heading', { name: 'Progresso' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Progresso no curso' })).toBeInTheDocument();
     expect(screen.getByText('Ana Beatriz Lima')).toBeInTheDocument();
   });
 
@@ -53,37 +83,36 @@ describe('guardas de rota', () => {
 
 describe('login', () => {
   it('entra com o nome de usuário e vai para a área do perfil', async () => {
-    fetchMock.mockResolvedValue(
-      respostaJson(200, { token: 'novo-token', expiresIn: 3600, usuario: sessaoAluno.usuario }),
-    );
+    const chamadas = simularApi(fetchMock, { ...apiAluno, ...loginAluno });
     const { router } = renderApp('/login');
 
     await userEvent.type(screen.getByLabelText('Nome de usuário'), 'ana');
     await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
 
-    expect(await screen.findByRole('heading', { name: 'Ofertas' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Ofertas do semestre' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/aluno/ofertas');
     expect(sessaoStorage.ler()?.token).toBe('novo-token');
-    expect(JSON.parse(String(fetchMock.mock.calls[0]![1]?.body))).toEqual({ username: 'ana' });
+    expect(chamadas[0]).toMatchObject({ metodo: 'POST', corpo: { username: 'ana' } });
   });
 
   it('volta para a página que o usuário tentou abrir antes do login', async () => {
-    fetchMock.mockResolvedValue(
-      respostaJson(200, { token: 't', expiresIn: 3600, usuario: sessaoAluno.usuario }),
-    );
+    simularApi(fetchMock, { ...apiAluno, ...loginAluno });
     const { router } = renderApp('/aluno/progresso');
 
     await userEvent.type(await screen.findByLabelText('Nome de usuário'), 'ana');
     await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
 
-    expect(await screen.findByRole('heading', { name: 'Progresso' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Progresso no curso' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/aluno/progresso');
   });
 
   it('mostra a mensagem da API quando o login é recusado', async () => {
-    fetchMock.mockResolvedValue(
-      respostaJson(401, { code: 'CREDENCIAIS_INVALIDAS', message: 'Usuário ou senha inválidos.' }),
-    );
+    simularApi(fetchMock, {
+      'POST /auth/login': respostaJson(401, {
+        code: 'CREDENCIAIS_INVALIDAS',
+        message: 'Usuário ou senha inválidos.',
+      }),
+    });
     renderApp('/login');
 
     await userEvent.type(screen.getByLabelText('Nome de usuário'), 'fantasma');
@@ -125,16 +154,18 @@ describe('fim da sessão', () => {
   });
 
   it('sessão expirada (401 da API) leva ao login com aviso', async () => {
-    renderApp('/aluno/ofertas', { sessao: sessaoAluno });
-    await screen.findByRole('heading', { name: 'Ofertas' });
-    fetchMock.mockResolvedValue(
-      respostaJson(401, { code: 'TOKEN_EXPIRADO', message: 'Sua sessão expirou.' }),
-    );
+    simularApi(fetchMock, {
+      'GET /aluno/ofertas': respostaJson(401, {
+        code: 'TOKEN_EXPIRADO',
+        message: 'Sua sessão expirou.',
+      }),
+    });
 
-    await act(() => api('/aluno/ofertas').catch(() => undefined));
+    const { router } = renderApp('/aluno/ofertas', { sessao: sessaoAluno });
 
     expect(await screen.findByText(/Sua sessão expirou/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/login');
     expect(sessaoStorage.ler()).toBeNull();
   });
 });

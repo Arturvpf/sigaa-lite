@@ -393,6 +393,271 @@ a {
   cursor: pointer;
 }
 
+/* --- Páginas e listas --------------------------------------------------- */
+
+.cabecalho-pagina {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espaco-2);
+}
+
+.barra-ferramentas {
+  display: flex;
+  gap: var(--espaco-2);
+  margin-bottom: var(--espaco-4);
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--espaco-3);
+}
+
+.item-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-3);
+  padding: var(--espaco-4);
+}
+
+.item-lista__cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--espaco-2);
+}
+
+.item-lista__titulo {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.item-lista__detalhe {
+  margin: var(--espaco-1) 0 0;
+  font-size: 0.875rem;
+  color: var(--cor-texto-suave);
+}
+
+.item-lista__rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-2);
+}
+
+.item-lista__rodape--fim {
+  justify-content: flex-end;
+}
+
+.codigo {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-weight: 700;
+}
+
+.nota {
+  margin-top: var(--espaco-6);
+  font-size: 0.875rem;
+  color: var(--cor-texto-suave);
+}
+
+/* --- Etiquetas de classificação (regra 10): cor + texto, nunca só cor ---- */
+
+.etiqueta {
+  display: inline-block;
+  padding: 2px var(--espaco-2);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.etiqueta--obrigatoria {
+  background: #fde68a;
+  color: #713f12;
+}
+
+.etiqueta--eletiva-perfil {
+  background: #c7d2fe;
+  color: #312e81;
+}
+
+.etiqueta--eletiva-livre {
+  background: #bbf7d0;
+  color: #14532d;
+}
+
+@media (prefers-color-scheme: dark) {
+  .etiqueta--obrigatoria {
+    background: #422006;
+    color: #fde68a;
+    border-color: #854d0e;
+  }
+
+  .etiqueta--eletiva-perfil {
+    background: #1e1b4b;
+    color: #c7d2fe;
+    border-color: #4338ca;
+  }
+
+  .etiqueta--eletiva-livre {
+    background: #052e16;
+    color: #bbf7d0;
+    border-color: #15803d;
+  }
+}
+
+/* --- Vagas e situação ---------------------------------------------------- */
+
+.vagas {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--cor-sucesso);
+}
+
+.vagas--poucas {
+  color: #b45309;
+}
+
+.vagas--lotada {
+  color: var(--cor-erro);
+}
+
+@media (prefers-color-scheme: dark) {
+  .vagas--poucas {
+    color: #fbbf24;
+  }
+}
+
+.situacao {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+}
+
+.situacao--matriculado {
+  color: var(--cor-sucesso);
+}
+
+/* --- Botões de perigo ---------------------------------------------------- */
+
+/* Vermelho escuro fixo: texto branco com bom contraste nos temas claro e escuro */
+.botao--perigo {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  color: #fff;
+}
+
+.botao--perigo:hover:not(:disabled) {
+  background: #991b1b;
+  border-color: #991b1b;
+}
+
+.botao--perigo-contorno {
+  color: var(--cor-erro);
+  border-color: var(--cor-erro);
+}
+
+/* --- Diálogo de confirmação --------------------------------------------- */
+
+.dialogo__fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--espaco-4);
+  background: rgb(0 0 0 / 0.45);
+}
+
+.dialogo {
+  width: 100%;
+  max-width: 440px;
+}
+
+.dialogo h2 {
+  margin: 0 0 var(--espaco-2);
+  font-size: 1.125rem;
+}
+
+.dialogo__corpo p {
+  margin: 0;
+}
+
+.dialogo__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--espaco-2);
+  margin-top: var(--espaco-6);
+}
+
+/* --- Progresso ----------------------------------------------------------- */
+
+.grupo-progresso {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-3);
+  padding: var(--espaco-4);
+}
+
+.grupo-progresso__cabecalho {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.grupo-progresso h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.percentual {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.percentual--concluido {
+  color: var(--cor-sucesso);
+}
+
+.barra-progresso {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--cor-borda);
+  overflow: hidden;
+}
+
+.barra-progresso__preenchido {
+  height: 100%;
+  background: var(--cor-primaria);
+  border-radius: 999px;
+}
+
+.numeros {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espaco-2) var(--espaco-4);
+  margin: 0;
+}
+
+.numeros dt {
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+}
+
+.numeros dd {
+  margin: 0;
+  font-weight: 600;
+}
+
 /* --- Telas maiores ------------------------------------------------------ */
 
 @media (min-width: 640px) {
@@ -415,5 +680,15 @@ a {
   .toasts {
     left: auto;
     width: 380px;
+  }
+
+  .numeros {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 960px) {
+  .lista--grade {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
