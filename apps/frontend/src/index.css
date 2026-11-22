@@ -1,10 +1,32 @@
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+/* ==========================================================================
+   SIGAA Lite — estilos globais (mobile-first: a base vale para 360px)
+   ========================================================================== */
 
 :root {
+  --cor-fundo: #f5f6f8;
+  --cor-superficie: #ffffff;
+  --cor-texto: #1f2937;
+  --cor-texto-suave: #6b7280;
+  --cor-borda: #d8dce3;
+  --cor-primaria: #1d4ed8;
+  --cor-primaria-hover: #1e40af;
+  --cor-texto-primaria: #ffffff;
+  --cor-sucesso: #15803d;
+  --cor-sucesso-fundo: #dcfce7;
+  --cor-erro: #b91c1c;
+  --cor-erro-fundo: #fee2e2;
+  --cor-info: #1e40af;
+  --cor-info-fundo: #dbeafe;
+  --cor-foco: #2563eb;
+
+  --raio: 8px;
+  --espaco-1: 0.25rem;
+  --espaco-2: 0.5rem;
+  --espaco-3: 0.75rem;
+  --espaco-4: 1rem;
+  --espaco-6: 1.5rem;
+  --sombra: 0 1px 3px rgb(0 0 0 / 0.08), 0 1px 2px rgb(0 0 0 / 0.04);
+
   font-family:
     system-ui,
     -apple-system,
@@ -12,17 +34,386 @@
     Roboto,
     sans-serif;
   line-height: 1.5;
-  color: #1f2937;
-  background-color: #f9fafb;
+  color: var(--cor-texto);
+  background-color: var(--cor-fundo);
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cor-fundo: #111318;
+    --cor-superficie: #1b1e25;
+    --cor-texto: #e5e7eb;
+    --cor-texto-suave: #9ca3af;
+    --cor-borda: #333845;
+    --cor-primaria: #3b82f6;
+    --cor-primaria-hover: #60a5fa;
+    --cor-sucesso: #4ade80;
+    --cor-sucesso-fundo: #14301f;
+    --cor-erro: #f87171;
+    --cor-erro-fundo: #3a1717;
+    --cor-info: #93c5fd;
+    --cor-info-fundo: #172554;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
   min-width: 320px;
+  background-color: var(--cor-fundo);
 }
 
-.container {
-  max-width: 960px;
+h1 {
+  font-size: 1.375rem;
+  margin: 0 0 var(--espaco-4);
+}
+
+a {
+  color: var(--cor-primaria);
+}
+
+:focus-visible {
+  outline: 2px solid var(--cor-foco);
+  outline-offset: 2px;
+}
+
+.texto-suave {
+  color: var(--cor-texto-suave);
+}
+
+.visualmente-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* --- Botões ------------------------------------------------------------- */
+
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espaco-2);
+  min-height: 44px; /* alvo de toque confortável no celular */
+  padding: var(--espaco-2) var(--espaco-4);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.botao:hover:not(:disabled) {
+  border-color: var(--cor-primaria);
+}
+
+.botao:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.botao--primario {
+  background: var(--cor-primaria);
+  border-color: var(--cor-primaria);
+  color: var(--cor-texto-primaria);
+}
+
+.botao--primario:hover:not(:disabled) {
+  background: var(--cor-primaria-hover);
+}
+
+.botao--discreto {
+  min-height: 36px;
+  padding: var(--espaco-1) var(--espaco-3);
+}
+
+/* --- Formulários -------------------------------------------------------- */
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-1);
+  font-weight: 500;
+}
+
+.campo input,
+.campo select {
+  min-height: 44px;
+  padding: var(--espaco-2) var(--espaco-3);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+  font: inherit;
+  font-weight: 400;
+}
+
+.campo--busca {
+  flex: 1;
+}
+
+/* --- Avisos ------------------------------------------------------------- */
+
+.aviso {
+  margin: 0;
+  padding: var(--espaco-3);
+  border-radius: var(--raio);
+}
+
+.aviso--erro {
+  background: var(--cor-erro-fundo);
+  color: var(--cor-erro);
+}
+
+.aviso--info {
+  background: var(--cor-info-fundo);
+  color: var(--cor-info);
+}
+
+/* --- Cartões e páginas centralizadas ------------------------------------ */
+
+.cartao {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: var(--espaco-6) var(--espaco-4);
+  box-shadow: var(--sombra);
+}
+
+.pagina-centralizada {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--espaco-4);
+}
+
+.pagina-centralizada .cartao {
+  width: 100%;
+  max-width: 400px;
+}
+
+.formulario-login {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-4);
+}
+
+.formulario-login h1 {
+  margin: 0;
+}
+
+.formulario-login .texto-suave {
+  margin: calc(-1 * var(--espaco-3)) 0 0;
+}
+
+/* --- Layout das áreas logadas ------------------------------------------- */
+
+.cabecalho {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--cor-superficie);
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.cabecalho__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-2);
+  padding: var(--espaco-2) var(--espaco-4);
+}
+
+.marca {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.marca__area {
+  font-weight: 400;
+  color: var(--cor-texto-suave);
+}
+
+.cabecalho__usuario {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-2);
+  min-width: 0;
+}
+
+.cabecalho__nome {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--cor-texto-suave);
+  font-size: 0.875rem;
+}
+
+.navegacao {
+  display: flex;
+  overflow-x: auto;
+  padding: 0 var(--espaco-2);
+}
+
+.navegacao__link {
+  flex: 1 0 auto;
+  padding: var(--espaco-3);
+  text-align: center;
+  color: var(--cor-texto-suave);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+}
+
+.navegacao__link.active {
+  color: var(--cor-primaria);
+  border-bottom-color: var(--cor-primaria);
+}
+
+.conteudo {
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: var(--espaco-4);
+}
+
+/* --- Estados de lista --------------------------------------------------- */
+
+.estado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espaco-3);
+  padding: var(--espaco-6) var(--espaco-4);
+  text-align: center;
+  color: var(--cor-texto-suave);
+}
+
+.estado p {
+  margin: 0;
+}
+
+.estado--erro {
+  color: var(--cor-erro);
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--cor-borda);
+  border-top-color: var(--cor-primaria);
+  border-radius: 50%;
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+/* --- Paginação ---------------------------------------------------------- */
+
+.paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-2);
+  margin-top: var(--espaco-4);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+/* --- Toasts ------------------------------------------------------------- */
+
+.toasts {
+  position: fixed;
+  left: var(--espaco-4);
+  right: var(--espaco-4);
+  bottom: var(--espaco-4);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-2);
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--espaco-3);
+  padding: var(--espaco-3) var(--espaco-4);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  pointer-events: auto;
+}
+
+.toast--sucesso {
+  background: var(--cor-sucesso-fundo);
+  color: var(--cor-sucesso);
+}
+
+.toast--erro {
+  background: var(--cor-erro-fundo);
+  color: var(--cor-erro);
+}
+
+.toast--info {
+  background: var(--cor-info-fundo);
+  color: var(--cor-info);
+}
+
+.toast__fechar {
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* --- Telas maiores ------------------------------------------------------ */
+
+@media (min-width: 640px) {
+  h1 {
+    font-size: 1.625rem;
+  }
+
+  .navegacao {
+    padding: 0 var(--espaco-4);
+  }
+
+  .navegacao__link {
+    flex: 0 0 auto;
+  }
+
+  .conteudo {
+    padding: var(--espaco-6);
+  }
+
+  .toasts {
+    left: auto;
+    width: 380px;
+  }
 }

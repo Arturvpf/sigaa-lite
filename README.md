@@ -107,17 +107,17 @@ Usuario 1──0..1 Aluno N──1 Curso 1──N EstruturaCurricular N──1 D
 
 ## Scripts úteis (na raiz)
 
-| Comando                | O que faz                                          |
-| ---------------------- | -------------------------------------------------- |
-| `npm run dev`          | Sobe back-end e front-end juntos                   |
-| `npm run dev:backend`  | Sobe só a API, com recarregamento automático       |
-| `npm run dev:frontend` | Sobe só o front-end                                |
-| `npm test`             | Roda todos os testes (unitários + integração)      |
-| `npm run test:unit`    | Roda só os testes unitários (não precisa de banco) |
-| `npm run lint`         | Analisa o código com ESLint                        |
-| `npm run format`       | Formata o código com Prettier                      |
-| `npm run typecheck`    | Verifica os tipos de todos os workspaces           |
-| `npm run build`        | Gera o build de produção dos dois apps             |
+| Comando                | O que faz                                           |
+| ---------------------- | --------------------------------------------------- |
+| `npm run dev`          | Sobe back-end e front-end juntos                    |
+| `npm run dev:backend`  | Sobe só a API, com recarregamento automático        |
+| `npm run dev:frontend` | Sobe só o front-end                                 |
+| `npm test`             | Roda todos os testes (back-end e front-end)         |
+| `npm run test:unit`    | Roda só os testes unitários do back-end (sem banco) |
+| `npm run lint`         | Analisa o código com ESLint                         |
+| `npm run format`       | Formata o código com Prettier                       |
+| `npm run typecheck`    | Verifica os tipos de todos os workspaces            |
+| `npm run build`        | Gera o build de produção dos dois apps              |
 
 > Os testes de integração usam o banco `sigaa_test` (criado pelo docker-compose), então o PostgreSQL precisa estar no ar: `docker compose up -d`. As migrations são aplicadas automaticamente nesse banco antes dos testes, e ele é limpo antes de cada teste — o banco de desenvolvimento nunca é tocado.
 
@@ -344,6 +344,38 @@ Os testes verificam **comportamento**, não implementação: cada caso diz o que
 
 O **Vite** oferece build e recarregamento rápidos com configuração mínima.
 
+```
+apps/frontend/src/
+├── main.tsx              # providers: React Query → Auth → Toast → Router
+├── routes.tsx            # mapa de rotas (/login, /aluno/*, /secretaria/*)
+├── api/                  # cliente HTTP único, ApiError e configuração do React Query
+├── auth/                 # sessão, AuthProvider, useAuth e guardas de rota
+├── layouts/AppLayout.tsx # cabeçalho com usuário e "Sair" + navegação da área
+├── components/           # estados de lista, toast, busca, paginação
+├── hooks/                # busca e página na URL
+└── pages/                # telas
+```
+
+**Estado do servidor com TanStack Query.** Os dados vêm da API, então o problema principal é cache, carregamento, erro e atualização depois de uma ação, não estado local. O React Query resolve isso sem uma store global escrita à mão: cada tela declara a consulta que precisa (`useQuery`) e, depois de matricular ou cancelar, basta invalidar as consultas afetadas (ofertas, matrículas e progresso). Só falhas transitórias (rede ou 5xx) são repetidas automaticamente; erros 4xx não mudam tentando de novo.
+
+**Cliente HTTP único** ([`api/client.ts`](apps/frontend/src/api/client.ts)). Todas as chamadas passam por ele, que:
+
+- injeta o token no cabeçalho `Authorization`;
+- converte o formato de erro da API (`{ code, message, details }`) em `ApiError`, e falha de rede em `ApiError` com status 0, para que as telas mostrem mensagens claras sem tratar `fetch` diretamente;
+- em **401 com sessão ativa**, avisa o `AuthProvider`, que limpa a sessão; as guardas levam ao login com o aviso "Sua sessão expirou". O 401 de credenciais inválidas no próprio login não é tratado como expiração.
+
+**Sessão no `localStorage`**, para sobreviver a um recarregamento. O trade-off conhecido é que um script injetado (XSS) poderia ler o token; o React escapa o conteúdo renderizado e o token expira em 1h. Com mais tempo, usaria um cookie `HttpOnly` + `SameSite` (exigindo proteção contra CSRF). O acesso ao storage é protegido com `try/catch` (modo privado/storage bloqueado).
+
+**Guardas de rota**: sem sessão → `/login`, lembrando a página pedida (depois do login o usuário volta para ela, se for da área do seu perfil); perfil errado → tela **"Acesso negado"** com link para a própria área, em vez de um redirecionamento silencioso, para deixar claro o que aconteceu.
+
+**Busca e página na URL** (`?q=&page=`, hook [`useParametrosLista`](apps/frontend/src/hooks/useParametrosLista.ts)): recarregar ou compartilhar a URL mantém a listagem, e o "voltar" do navegador funciona. Mudar a busca volta para a página 1. O campo de busca usa **debounce** (400 ms) para não chamar a API a cada tecla.
+
+**Estados de interface reutilizáveis**: `Carregando`, `ListaVazia` (não há dados), `SemResultados` (a busca não achou nada, com "Limpar busca") e `ErroAoCarregar` (com "Tentar novamente"); e **toasts** para confirmar ações e explicar recusas de regra de negócio (ex.: "Esta turma não tem mais vagas disponíveis."). Erros usam `role="alert"` para leitores de tela.
+
+**CSS próprio, mobile-first**, com variáveis de cor e espaçamento e modo escuro automático; sem framework de UI, para manter o projeto pequeno e o layout fácil de explicar.
+
+**Testes do front-end** (Vitest + Testing Library + jsdom): montam as **rotas reais** num roteador em memória e simulam a API com `fetch` falso. Cobrem o cliente HTTP, guardas por perfil, login (sucesso, recusa, falha de rede, volta à página pedida), logout, sessão expirada, paginação, busca com debounce, estados de erro e busca/página na URL.
+
 ## Status
 
 | Fase | Descrição                    | Status       |
@@ -353,7 +385,7 @@ O **Vite** oferece build e recarregamento rápidos com configuração mínima.
 | 2    | Autenticação e base da API   | ✅ Concluída |
 | 3    | Fluxo do aluno (back-end)    | ✅ Concluída |
 | 4    | Testes das regras de negócio | ✅ Concluída |
-| 5    | Front-end base               | ⏳ A fazer   |
+| 5    | Front-end base               | ✅ Concluída |
 | 6    | Front-end do aluno           | ⏳ A fazer   |
 | 7    | Secretaria                   | ⏳ A fazer   |
 | 8    | Requisito à escolha          | ⏳ A fazer   |
