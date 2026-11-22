@@ -548,15 +548,16 @@ a {
 
 /* --- Botões de perigo ---------------------------------------------------- */
 
+/* Vermelho escuro fixo: texto branco com bom contraste nos temas claro e escuro */
 .botao--perigo {
-  background: var(--cor-erro);
-  border-color: var(--cor-erro);
+  background: #b91c1c;
+  border-color: #b91c1c;
   color: #fff;
 }
 
 .botao--perigo:hover:not(:disabled) {
-  filter: brightness(0.92);
-  border-color: var(--cor-erro);
+  background: #991b1b;
+  border-color: #991b1b;
 }
 
 .botao--perigo-contorno {
