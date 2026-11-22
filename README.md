@@ -320,6 +320,26 @@ O **Vitest** é rápido, tem suporte nativo a TypeScript/ESM e API compatível c
 - **unit** (`tests/unit`): funções puras e peças isoladas, sem banco;
 - **integration** (`tests/integration`): a API real via **supertest**, ligada ao PostgreSQL no banco `sigaa_test`. Cada teste começa com o banco vazio e cria só os dados de que precisa, então os testes não dependem uns dos outros nem do seed.
 
+Os testes verificam **comportamento**, não implementação: cada caso diz o que o usuário observa (status, código de erro, vagas, CH) e falha se a regra quebrar. Isso foi conferido por **mutação**: removi a checagem de turma lotada, de disciplina aprovada e de duplicidade do service, e o `FOR UPDATE` do repositório, um de cada vez, e em todos os casos algum teste falhou. (A checagem de "matrícula já cancelada" no service é redundante com o update condicional do repositório, por isso removê-la sozinha não quebra nada: a regra continua garantida.)
+
+### Rastreabilidade das regras de negócio
+
+| #   | Regra                                                  | Onde está implementada                                                                    | Testes                                                                                                                     |
+| --- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Código da disciplina é único                           | `UNIQUE` em `disciplinas.codigo` (validação na API na Fase 7)                             | `restricoes-banco.test.ts`                                                                                                 |
+| 2   | CH múltipla de 15, entre 15h e 120h                    | `CHECK disciplinas_ch_check` (validação na API na Fase 7)                                 | `restricoes-banco.test.ts` (10, 20, 125, 0, −15, 135 recusadas; 15, 60, 120 aceitas)                                       |
+| 3   | E-mail do professor é único                            | `UNIQUE` em `professores.email` (validação na API na Fase 7)                              | `restricoes-banco.test.ts`                                                                                                 |
+| 4   | Turma tem disciplina, professor e ≥ 1 vaga             | FKs `NOT NULL` + `CHECK turmas_vagas_check` (validação na API na Fase 7)                  | `restricoes-banco.test.ts`                                                                                                 |
+| 5   | Vagas nunca abaixo dos matriculados                    | Fase 7 (alteração de vagas pela secretaria)                                               | Fase 7                                                                                                                     |
+| 6   | Não matricular em turma lotada                         | `aluno.service.ts` → `matricular` (com `SELECT ... FOR UPDATE`)                           | `aluno.service.test.ts`, `aluno.test.ts` (inclui teste determinístico do lock), `fluxo-completo.test.ts`                   |
+| 7   | Não matricular em disciplina aprovada (reprovada pode) | `aluno.service.ts` → `matricular`                                                         | `aluno.service.test.ts`, `aluno.test.ts`                                                                                   |
+| 8   | Cancelar matrícula ativa devolve a vaga                | `aluno.service.ts` → `cancelarMatricula` + update condicional; vagas = contagem de ativas | `aluno.service.test.ts`, `aluno.test.ts`, `fluxo-completo.test.ts`                                                         |
+| 9   | Aluno só vê e altera as próprias matrículas            | `getAlunoId` (aluno vem do token) + consultas filtradas por aluno                         | `aluno.service.test.ts`, `aluno.test.ts` (404 para matrícula alheia, `alunoId` no corpo ignorado), `http-pipeline.test.ts` |
+| 10  | Classificação depende do curso do aluno                | `classificacao.ts`                                                                        | `progresso.test.ts`, `aluno.test.ts` (ofertas e progresso de alunos de cursos diferentes)                                  |
+| 11  | Excedente de eletiva de perfil conta como livre        | `progresso.ts`                                                                            | `progresso.test.ts`                                                                                                        |
+| 12  | Só aprovadas integralizam; ativas = em curso           | `progresso.ts` + `aluno.service.ts` → `progresso` (só `APROVADO` e matrículas `ATIVA`)    | `progresso.test.ts`, `aluno.test.ts`, `fluxo-completo.test.ts`                                                             |
+| 13  | Percentual ≤ 100% e faltante ≥ 0                       | `progresso.ts`                                                                            | `progresso.test.ts`                                                                                                        |
+
 ### Front-end: React + Vite + TypeScript
 
 O **Vite** oferece build e recarregamento rápidos com configuração mínima.
@@ -332,7 +352,7 @@ O **Vite** oferece build e recarregamento rápidos com configuração mínima.
 | 1    | Modelagem de dados e seed    | ✅ Concluída |
 | 2    | Autenticação e base da API   | ✅ Concluída |
 | 3    | Fluxo do aluno (back-end)    | ✅ Concluída |
-| 4    | Testes das regras de negócio | ⏳ A fazer   |
+| 4    | Testes das regras de negócio | ✅ Concluída |
 | 5    | Front-end base               | ⏳ A fazer   |
 | 6    | Front-end do aluno           | ⏳ A fazer   |
 | 7    | Secretaria                   | ⏳ A fazer   |
