@@ -374,7 +374,19 @@ apps/frontend/src/
 
 **CSS próprio, mobile-first**, com variáveis de cor e espaçamento e modo escuro automático; sem framework de UI, para manter o projeto pequeno e o layout fácil de explicar.
 
-**Testes do front-end** (Vitest + Testing Library + jsdom): montam as **rotas reais** num roteador em memória e simulam a API com `fetch` falso. Cobrem o cliente HTTP, guardas por perfil, login (sucesso, recusa, falha de rede, volta à página pedida), logout, sessão expirada, paginação, busca com debounce, estados de erro e busca/página na URL.
+**Testes do front-end** (Vitest + Testing Library + jsdom): montam as **rotas reais** num roteador em memória e simulam a API por rota (`simularApi`). Cobrem o cliente HTTP, guardas por perfil, login (sucesso, recusa, falha de rede, volta à página pedida), logout, sessão expirada, paginação, busca com debounce, estados de erro, busca/página na URL e as telas do aluno. Rotas não simuladas respondem 500, para um teste não passar por acidente.
+
+### Telas do aluno (mobile a partir de 360px)
+
+- **Ofertas** — busca por código ou nome e paginação refletidas na URL; cada turma mostra vagas disponíveis (destacando quando restam poucas ou está lotada) e a **classificação para o curso do aluno** como etiqueta colorida **com texto** (a cor nunca é a única pista). O botão "Matricular" mostra "Matriculando…" durante a chamada, fica desabilitado em turma lotada e enquanto outra matrícula está em andamento; turmas em que o aluno já está matriculado ou disciplinas já aprovadas aparecem sinalizadas, sem botão. A sinalização é só uma ajuda: **quem decide é a API** (a tela pode estar desatualizada), e a recusa aparece como aviso com a mensagem da API.
+- **Minhas matrículas** — matrículas ativas com total de CH do semestre; cancelar abre um **diálogo de confirmação** (foco começa em "Voltar", Esc fecha) que diz qual disciplina será cancelada e que a vaga será liberada.
+- **Progresso** — para cada grupo, CH exigida, integralizada, em curso e o que falta, com **barra de progresso** acessível (`role="progressbar"`) e uma nota explicando as regras (aprovadas integralizam; matrículas ativas ficam "em curso"; excedente de perfil vira livre).
+
+**Atualização após matricular ou cancelar**: todas as consultas do aluno ficam sob a chave `['aluno']` do React Query. Depois de uma matrícula ou cancelamento — **com sucesso ou recusa** — essa chave é invalidada, então ofertas (vagas), matrículas e progresso são recarregados juntos. Recarregar também na recusa importa: se a turma lotou enquanto o aluno olhava a tela, a lista passa a mostrar a turma lotada.
+
+Ao trocar de página, a lista anterior continua na tela até a nova chegar (`keepPreviousData`), com um indicador "Atualizando…", em vez de piscar um carregamento.
+
+Verificado manualmente no navegador em **360×780**, nos temas claro e escuro: login, busca, matrícula, cancelamento com confirmação e progresso, **sem rolagem horizontal** em nenhuma das telas.
 
 ## Status
 
@@ -386,7 +398,7 @@ apps/frontend/src/
 | 3    | Fluxo do aluno (back-end)    | ✅ Concluída |
 | 4    | Testes das regras de negócio | ✅ Concluída |
 | 5    | Front-end base               | ✅ Concluída |
-| 6    | Front-end do aluno           | ⏳ A fazer   |
+| 6    | Front-end do aluno           | ✅ Concluída |
 | 7    | Secretaria                   | ⏳ A fazer   |
 | 8    | Requisito à escolha          | ⏳ A fazer   |
 | 9    | Documentação final           | ⏳ A fazer   |
