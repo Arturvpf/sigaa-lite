@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router';
+import { Navigate, useLocation } from 'react-router';
 import { mensagemDeErro } from '../api/errors';
 import { useAuth } from '../auth/auth-context';
 import { areaDoPerfil, type Perfil } from '../auth/session';
@@ -10,25 +10,23 @@ const prefixoDoPerfil: Record<Perfil, string> = { ALUNO: '/aluno', SECRETARIA: '
 
 export function LoginPage() {
   const { usuario, entrar, sessaoExpirada } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const [username, setUsername] = useState('');
   const [senha, setSenha] = useState('');
 
   const login = useMutation({
     mutationFn: () => entrar(username.trim(), senha || undefined),
-    onSuccess: (logado) => {
-      const from = (location.state as { from?: string } | null)?.from;
-      const destino = from?.startsWith(prefixoDoPerfil[logado.perfil])
-        ? from
-        : areaDoPerfil(logado.perfil);
-      navigate(destino, { replace: true });
-    },
   });
 
-  // Já logado (ex.: abriu /login de novo): vai direto para a própria área
-  if (usuario && !login.isPending) {
-    return <Navigate to={areaDoPerfil(usuario.perfil)} replace />;
+  // Um único caminho de redirecionamento: assim que houver usuário (login concluído agora
+  // ou sessão já existente), vai para a página pedida antes do login, se for da área dele,
+  // ou para a área do perfil.
+  if (usuario) {
+    const from = (location.state as { from?: string } | null)?.from;
+    const destino = from?.startsWith(prefixoDoPerfil[usuario.perfil])
+      ? from
+      : areaDoPerfil(usuario.perfil);
+    return <Navigate to={destino} replace />;
   }
 
   function enviar(evento: FormEvent) {
