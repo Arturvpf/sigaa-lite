@@ -7,6 +7,9 @@ import { createAlunoRepository } from './modules/aluno/aluno.repository.js';
 import { createAlunoRoutes } from './modules/aluno/aluno.routes.js';
 import { createAlunoService } from './modules/aluno/aluno.service.js';
 import { createAuthRoutes } from './modules/auth/auth.routes.js';
+import { createSecretariaRepository } from './modules/secretaria/secretaria.repository.js';
+import { createSecretariaRoutes } from './modules/secretaria/secretaria.routes.js';
+import { createSecretariaService } from './modules/secretaria/secretaria.service.js';
 import { createAuthService } from './modules/auth/auth.service.js';
 import { createUsuarioRepository } from './modules/auth/usuario.repository.js';
 import { createTokenService } from './shared/auth/token-service.js';
@@ -29,6 +32,7 @@ export function createApp({ env, prisma }: AppDeps): Express {
 
   const authService = createAuthService({ usuarios: createUsuarioRepository(prisma), tokens });
   const alunoService = createAlunoService({ repo: createAlunoRepository(prisma) });
+  const secretariaService = createSecretariaService({ repo: createSecretariaRepository(prisma) });
 
   const app = express();
 
@@ -42,6 +46,7 @@ export function createApp({ env, prisma }: AppDeps): Express {
   });
   app.use('/auth', createAuthRoutes({ service: authService, tokens }));
   app.use('/aluno', createAlunoRoutes({ service: alunoService, tokens }));
+  app.use('/secretaria', createSecretariaRoutes({ service: secretariaService, tokens }));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
