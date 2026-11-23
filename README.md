@@ -226,6 +226,24 @@ Todas as listagens aceitam `?q=<busca>&page=<n>&pageSize=<n>` (padrão `page=1`,
 { "items": [], "total": 0, "page": 1, "pageSize": 10, "totalPages": 0 }
 ```
 
+## Requisito à escolha: pré-requisitos entre disciplinas
+
+### Por que este
+
+Pré-requisitos são uma regra central de qualquer matrícula real e se apoiam no que o sistema já tem: o **histórico de aprovações** (o mesmo usado na regra 7) e o fluxo de matrícula com transação. Isso permite entregar o requisito completo — modelagem, regra, testes, seed e telas do aluno e da secretaria — sem aumentar muito a complexidade, seguindo a orientação do edital de preferir poucas coisas bem feitas. Choque de horário e lista de espera ficaram em "o que eu faria com mais tempo".
+
+### Regras definidas
+
+1. Uma disciplina pode ter **zero ou mais pré-requisitos**, que são outras disciplinas.
+2. O aluno só pode se matricular numa turma se tiver **aprovação no histórico em todos os pré-requisitos** da disciplina.
+3. **Reprovação não atende** o pré-requisito, e **matrícula em curso também não**: não é possível cursar a disciplina e o seu pré-requisito no mesmo semestre.
+4. A recusa é `422 PRE_REQUISITO_PENDENTE`, com a lista dos pré-requisitos que faltam em `details.pendentes` (código e nome), para a tela dizer exatamente o que falta.
+5. A verificação acontece **na mesma transação da matrícula**, depois de "turma existe", "já aprovado" e "já matriculado", e antes de "turma lotada": quem não tem o pré-requisito fica sabendo disso, e não que a turma está cheia.
+6. Nas **ofertas**, cada turma mostra os pré-requisitos da disciplina e se cada um está atendido; com algum pendente, o botão de matrícula aparece desabilitado como "Pré-requisito pendente". Como sempre, quem decide é a API.
+7. A **secretaria define** os pré-requisitos de cada disciplina, substituindo a lista inteira de uma vez.
+8. Uma disciplina **não pode ser pré-requisito de si mesma**, e não são permitidos **ciclos** (A exige B e B exige A, direta ou indiretamente), porque ninguém conseguiria cursar nenhuma das duas. Ambos recusados com `422`.
+9. Alterar pré-requisitos **não afeta matrículas já feitas**: vale para as próximas matrículas.
+
 ## Principais decisões
 
 ### Back-end: Express
