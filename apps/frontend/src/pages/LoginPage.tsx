@@ -39,11 +39,17 @@ export function LoginPage() {
     <main className="pagina-centralizada">
       <div className="login">
         <div className="login__marca">
-          <span className="marca__icone">
-            <Icone nome="marca" tamanho={26} />
+          <span className="login__logo" aria-hidden="true">
+            <span className="marca__ponto" />
+            sigaa/lite
           </span>
-          <h1>SIGAA Lite</h1>
-          <p>Matrícula do semestre, sem fila e sem papel.</p>
+          <h1>
+            <span className="visualmente-oculto">SIGAA Lite: </span>
+            Matrícula do semestre, <span>sem fila.</span>
+          </h1>
+          <p>
+            Escolha suas turmas, veja as vagas em tempo real e acompanhe seu progresso no curso.
+          </p>
         </div>
 
         {sessaoExpirada && (

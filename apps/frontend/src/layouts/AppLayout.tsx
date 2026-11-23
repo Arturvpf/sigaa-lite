@@ -1,6 +1,5 @@
 import { NavLink, Outlet } from 'react-router';
 import { useAuth } from '../auth/auth-context';
-import { Icone } from '../components/Icone';
 
 export interface LinkNavegacao {
   para: string;
@@ -18,12 +17,12 @@ export function AppLayout({ area, links }: { area: string; links: LinkNavegacao[
       <header className="cabecalho">
         <div className="cabecalho__topo">
           <div className="marca">
-            <span className="marca__icone">
-              <Icone nome="marca" />
-            </span>
+            <span className="marca__ponto" aria-hidden="true" />
             <div className="marca__textos">
               <span className="marca__nome">
-                SIGAA Lite <span className="marca__area">{area}</span>
+                <span className="visualmente-oculto">SIGAA Lite</span>
+                <span aria-hidden="true">sigaa/lite</span>{' '}
+                <span className="marca__area">{area.toLowerCase()}</span>
               </span>
               <span className="marca__usuario" title={curso ? `${nome} · ${curso}` : nome}>
                 <span>{nome}</span>
