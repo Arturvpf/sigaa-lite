@@ -50,7 +50,15 @@ function consultas(db: Db) {
           select: {
             id: true,
             vagas: true,
-            disciplina: disciplinaResumo,
+            disciplina: {
+              select: {
+                ...disciplinaResumo.select,
+                preRequisitos: {
+                  select: { preRequisito: { select: { id: true, codigo: true, nome: true } } },
+                  orderBy: { preRequisito: { codigo: 'asc' } },
+                },
+              },
+            },
             professor: professorResumo,
             _count: { select: { matriculas: { where: { situacao: 'ATIVA' } } } },
           },
@@ -108,6 +116,22 @@ function consultas(db: Db) {
         select: { id: true },
       });
       return aprovacao !== null;
+    },
+
+    /**
+     * Pré-requisitos da disciplina que o aluno ainda NÃO tem aprovados no histórico.
+     * Reprovação e matrícula em curso não contam como atendido.
+     */
+    async listarPreRequisitosPendentes(alunoId: number, disciplinaId: number) {
+      const pendentes = await db.preRequisito.findMany({
+        where: {
+          disciplinaId,
+          preRequisito: { historico: { none: { alunoId, situacao: 'APROVADO' } } },
+        },
+        select: { preRequisito: { select: { id: true, codigo: true, nome: true } } },
+        orderBy: { preRequisito: { codigo: 'asc' } },
+      });
+      return pendentes.map((p) => p.preRequisito);
     },
 
     /** Matrícula ativa do aluno em qualquer turma da disciplina. */

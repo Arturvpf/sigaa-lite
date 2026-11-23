@@ -18,6 +18,7 @@ export function createSecretariaRoutes(deps: {
   router.post('/disciplinas', controller.criarDisciplina);
   router.get('/disciplinas/:id', controller.buscarDisciplina);
   router.put('/disciplinas/:id', controller.atualizarDisciplina);
+  router.put('/disciplinas/:id/pre-requisitos', controller.definirPreRequisitos);
 
   router.get('/professores', controller.listarProfessores);
   router.post('/professores', controller.criarProfessor);

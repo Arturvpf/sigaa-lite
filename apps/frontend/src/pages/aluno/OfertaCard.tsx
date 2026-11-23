@@ -28,6 +28,8 @@ export function OfertaCard({ oferta, onMatricular, matriculando, bloqueado }: Of
         <EtiquetaClassificacao classificacao={oferta.classificacao} />
       </div>
 
+      {oferta.preRequisitos.length > 0 && <PreRequisitos oferta={oferta} />}
+
       <div className="item-lista__rodape">
         <Vagas oferta={oferta} />
         <AcaoOferta
@@ -38,6 +40,27 @@ export function OfertaCard({ oferta, onMatricular, matriculando, bloqueado }: Of
         />
       </div>
     </li>
+  );
+}
+
+/** Pré-requisitos da disciplina, cada um marcado como atendido ou pendente (texto + ícone). */
+function PreRequisitos({ oferta }: { oferta: Oferta }) {
+  return (
+    <div className="pre-requisitos">
+      <span className="pre-requisitos__rotulo">Pré-requisitos:</span>
+      <ul className="pre-requisitos__lista">
+        {oferta.preRequisitos.map((p) => (
+          <li
+            key={p.id}
+            className={`pre-requisito ${p.atendido ? 'pre-requisito--ok' : 'pre-requisito--pendente'}`}
+            title={p.nome}
+          >
+            <span aria-hidden="true">{p.atendido ? '✓' : '✗'}</span> {p.codigo}
+            <span className="visualmente-oculto">{p.atendido ? ' (aprovado)' : ' (pendente)'}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -67,13 +90,20 @@ function AcaoOferta({ oferta, onMatricular, matriculando, bloqueado }: OfertaCar
   if (oferta.jaAprovado) {
     return <span className="situacao">Já aprovado</span>;
   }
-  const texto = matriculando ? 'Matriculando…' : oferta.lotada ? 'Sem vagas' : 'Matricular';
+  const preRequisitoPendente = oferta.preRequisitos.some((p) => !p.atendido);
+  const texto = matriculando
+    ? 'Matriculando…'
+    : preRequisitoPendente
+      ? 'Pré-requisito pendente'
+      : oferta.lotada
+        ? 'Sem vagas'
+        : 'Matricular';
   return (
     <button
       type="button"
       className="botao botao--primario"
       onClick={() => onMatricular(oferta.id)}
-      disabled={oferta.lotada || bloqueado}
+      disabled={oferta.lotada || preRequisitoPendente || bloqueado}
       // O nome acessível começa com o texto visível (que muda com o estado) e diz a disciplina
       aria-label={`${texto} em ${oferta.disciplina.codigo}`}
     >

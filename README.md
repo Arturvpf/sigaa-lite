@@ -58,14 +58,14 @@ npm run dev
 
 O login é feito apenas pelo nome de usuário (a senha é opcional e os usuários do seed não têm senha).
 
-| Usuário      | Perfil     | Curso                    | Cenário que exercita                                                                    |
-| ------------ | ---------- | ------------------------ | --------------------------------------------------------------------------------------- |
-| `secretaria` | Secretaria | —                        | Cadastros de disciplinas, professores e turmas                                          |
-| `ana`        | Aluno      | Ciência da Computação    | 165h de eletiva de perfil (exige 120h): **45h excedentes contam como livre**            |
-| `bruno`      | Aluno      | Ciência da Computação    | Recursa IF669 (reprovado); ocupa uma das 2 vagas da turma lotada de IF676               |
-| `carla`      | Aluno      | Engenharia da Computação | Mesmas disciplinas da Ana com outra classificação (IF671 é perfil, IF677 é livre)       |
-| `diego`      | Aluno      | Engenharia da Computação | Calouro sem histórico (progresso zerado)                                                |
-| `eduarda`    | Aluno      | Engenharia da Computação | Quase formada: obrigatórias e perfil completas, livre acima do exigido (limite de 100%) |
+| Usuário      | Perfil     | Curso                    | Cenário que exercita                                                                                                                                      |
+| ------------ | ---------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `secretaria` | Secretaria | —                        | Cadastros de disciplinas, professores e turmas                                                                                                            |
+| `ana`        | Aluno      | Ciência da Computação    | 165h de eletiva de perfil (exige 120h): **45h excedentes contam como livre**                                                                              |
+| `bruno`      | Aluno      | Ciência da Computação    | Recursa IF669 (reprovado); ocupa uma das 2 vagas da turma lotada de IF676; **sem IF669 aprovada, não pode cursar IF671, IF672 nem IF678 (pré-requisito)** |
+| `carla`      | Aluno      | Engenharia da Computação | Mesmas disciplinas da Ana com outra classificação (IF671 é perfil, IF677 é livre)                                                                         |
+| `diego`      | Aluno      | Engenharia da Computação | Calouro sem histórico (progresso zerado); **não pode cursar IF669 sem antes ser aprovado em IF668**                                                       |
+| `eduarda`    | Aluno      | Engenharia da Computação | Quase formada: obrigatórias e perfil completas, livre acima do exigido (limite de 100%)                                                                   |
 
 ### Dados de exemplo
 
@@ -163,7 +163,9 @@ Cada **oferta** traz:
 }
 ```
 
-`classificacao` é `OBRIGATORIA`, `ELETIVA_PERFIL` ou `ELETIVA_LIVRE` **para o curso do aluno logado**; `matriculaId` é a matrícula ativa do aluno nessa turma (ou `null`); `jaAprovado` indica que ele não pode se matricular.
+`classificacao` é `OBRIGATORIA`, `ELETIVA_PERFIL` ou `ELETIVA_LIVRE` **para o curso do aluno logado**; `matriculaId` é a matrícula ativa do aluno nessa turma (ou `null`); `jaAprovado` indica que ele não pode se matricular. `preRequisitos` lista os pré-requisitos da disciplina com `atendido` (aprovado no histórico) — ex.: `[{ "id": 2, "codigo": "IF669", "nome": "Algoritmos…", "atendido": false }]`.
+
+A matrícula também pode ser recusada com `422 PRE_REQUISITO_PENDENTE`, com `details.pendentes` listando o que falta.
 
 Cada **grupo** do progresso traz:
 
@@ -182,17 +184,18 @@ Cada **grupo** do progresso traz:
 
 Todas exigem token de um usuário com perfil `SECRETARIA` (401 sem token, 403 com outro perfil). Listagens aceitam `?q=&page=&pageSize=`.
 
-| Método | Rota                           | Entrada                                | Resposta                                                                                | Erros                                                                                              |
-| ------ | ------------------------------ | -------------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| GET    | `/secretaria/disciplinas`      | busca por código ou nome               | `200` página de `{ id, codigo, nome, ch }`                                              | —                                                                                                  |
-| POST   | `/secretaria/disciplinas`      | `{ codigo, nome, ch }`                 | `201 { id, codigo, nome, ch }`                                                          | 400 `VALIDACAO` (CH inválida etc.), 409 `CODIGO_DUPLICADO`                                         |
-| GET    | `/secretaria/disciplinas/:id`  | —                                      | `200 { id, codigo, nome, ch }`                                                          | 404 `DISCIPLINA_NAO_ENCONTRADA`                                                                    |
-| PUT    | `/secretaria/disciplinas/:id`  | `{ codigo, nome, ch }`                 | `200 { id, codigo, nome, ch }`                                                          | 400, 404, 409 `CODIGO_DUPLICADO`                                                                   |
-| GET    | `/secretaria/professores`      | busca por nome ou e-mail               | `200` página de `{ id, nome, email }`                                                   | —                                                                                                  |
-| POST   | `/secretaria/professores`      | `{ nome, email }`                      | `201 { id, nome, email }`                                                               | 400 (e-mail inválido), 409 `EMAIL_DUPLICADO`                                                       |
-| GET    | `/secretaria/turmas`           | busca por disciplina ou professor      | `200` página de `{ id, disciplina, professor, vagas, vagasOcupadas, vagasDisponiveis }` | —                                                                                                  |
-| POST   | `/secretaria/turmas`           | `{ disciplinaId, professorId, vagas }` | `201 { id }`                                                                            | 400 (vagas < 1, campo faltando), 422 `DISCIPLINA_INEXISTENTE` / `PROFESSOR_INEXISTENTE`            |
-| PATCH  | `/secretaria/turmas/:id/vagas` | `{ vagas }`                            | `200 { id, vagas, vagasOcupadas }`                                                      | 400, 404 `TURMA_NAO_ENCONTRADA`, 422 `VAGAS_ABAIXO_DOS_MATRICULADOS` (`details: { matriculados }`) |
+| Método | Rota                                         | Entrada                                           | Resposta                                                                                | Erros                                                                                                    |
+| ------ | -------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| GET    | `/secretaria/disciplinas`                    | busca por código ou nome                          | `200` página de `{ id, codigo, nome, ch }`                                              | —                                                                                                        |
+| POST   | `/secretaria/disciplinas`                    | `{ codigo, nome, ch }`                            | `201 { id, codigo, nome, ch }`                                                          | 400 `VALIDACAO` (CH inválida etc.), 409 `CODIGO_DUPLICADO`                                               |
+| GET    | `/secretaria/disciplinas/:id`                | —                                                 | `200 { id, codigo, nome, ch }`                                                          | 404 `DISCIPLINA_NAO_ENCONTRADA`                                                                          |
+| PUT    | `/secretaria/disciplinas/:id`                | `{ codigo, nome, ch }`                            | `200 { id, codigo, nome, ch }`                                                          | 400, 404, 409 `CODIGO_DUPLICADO`                                                                         |
+| PUT    | `/secretaria/disciplinas/:id/pre-requisitos` | `{ preRequisitoIds: [1, 2] }` (substitui a lista) | `200` disciplina com `preRequisitos`                                                    | 400, 404, 422 `PRE_REQUISITO_INVALIDO` (a própria), `PRE_REQUISITO_INEXISTENTE`, `PRE_REQUISITO_CICLICO` |
+| GET    | `/secretaria/professores`                    | busca por nome ou e-mail                          | `200` página de `{ id, nome, email }`                                                   | —                                                                                                        |
+| POST   | `/secretaria/professores`                    | `{ nome, email }`                                 | `201 { id, nome, email }`                                                               | 400 (e-mail inválido), 409 `EMAIL_DUPLICADO`                                                             |
+| GET    | `/secretaria/turmas`                         | busca por disciplina ou professor                 | `200` página de `{ id, disciplina, professor, vagas, vagasOcupadas, vagasDisponiveis }` | —                                                                                                        |
+| POST   | `/secretaria/turmas`                         | `{ disciplinaId, professorId, vagas }`            | `201 { id }`                                                                            | 400 (vagas < 1, campo faltando), 422 `DISCIPLINA_INEXISTENTE` / `PROFESSOR_INEXISTENTE`                  |
+| PATCH  | `/secretaria/turmas/:id/vagas`               | `{ vagas }`                                       | `200 { id, vagas, vagasOcupadas }`                                                      | 400, 404 `TURMA_NAO_ENCONTRADA`, 422 `VAGAS_ABAIXO_DOS_MATRICULADOS` (`details: { matriculados }`)       |
 
 O código da disciplina é normalizado (sem espaços, em maiúsculas: `if 668` → `IF668`) e o e-mail do professor em minúsculas, então a unicidade não depende de maiúsculas.
 
@@ -225,6 +228,34 @@ Todas as listagens aceitam `?q=<busca>&page=<n>&pageSize=<n>` (padrão `page=1`,
 ```json
 { "items": [], "total": 0, "page": 1, "pageSize": 10, "totalPages": 0 }
 ```
+
+## Requisito à escolha: pré-requisitos entre disciplinas
+
+### Por que este
+
+Pré-requisitos são uma regra central de qualquer matrícula real e se apoiam no que o sistema já tem: o **histórico de aprovações** (o mesmo usado na regra 7) e o fluxo de matrícula com transação. Isso permite entregar o requisito completo — modelagem, regra, testes, seed e telas do aluno e da secretaria — sem aumentar muito a complexidade, seguindo a orientação do edital de preferir poucas coisas bem feitas. Choque de horário e lista de espera ficaram em "o que eu faria com mais tempo".
+
+### Regras definidas
+
+1. Uma disciplina pode ter **zero ou mais pré-requisitos**, que são outras disciplinas.
+2. O aluno só pode se matricular numa turma se tiver **aprovação no histórico em todos os pré-requisitos** da disciplina.
+3. **Reprovação não atende** o pré-requisito, e **matrícula em curso também não**: não é possível cursar a disciplina e o seu pré-requisito no mesmo semestre.
+4. A recusa é `422 PRE_REQUISITO_PENDENTE`, com a lista dos pré-requisitos que faltam em `details.pendentes` (código e nome), para a tela dizer exatamente o que falta.
+5. A verificação acontece **na mesma transação da matrícula**, depois de "turma existe", "já aprovado" e "já matriculado", e antes de "turma lotada": quem não tem o pré-requisito fica sabendo disso, e não que a turma está cheia.
+6. Nas **ofertas**, cada turma mostra os pré-requisitos da disciplina e se cada um está atendido; com algum pendente, o botão de matrícula aparece desabilitado como "Pré-requisito pendente". Como sempre, quem decide é a API.
+7. A **secretaria define** os pré-requisitos de cada disciplina, substituindo a lista inteira de uma vez.
+8. Uma disciplina **não pode ser pré-requisito de si mesma**, e não são permitidos **ciclos** (A exige B e B exige A, direta ou indiretamente), porque ninguém conseguiria cursar nenhuma das duas. Ambos recusados com `422`.
+9. Alterar pré-requisitos **não afeta matrículas já feitas**: vale para as próximas matrículas.
+
+### Como foi implementado
+
+- **Modelo**: tabela `pre_requisitos (disciplina_id, pre_requisito_id)` com chave composta e um `CHECK` que impede a disciplina de exigir a si mesma ([migration](apps/backend/prisma/migrations/20261123003055_pre_requisitos/migration.sql)).
+- **Matrícula** ([`aluno.service.ts`](apps/backend/src/modules/aluno/aluno.service.ts)): dentro da transação já existente, uma consulta busca os pré-requisitos sem aprovação no histórico do aluno; se houver algum, recusa com `PRE_REQUISITO_PENDENTE`.
+- **Ciclos** ([`pre-requisitos.ts`](apps/backend/src/modules/secretaria/pre-requisitos.ts)): função pura que faz uma busca em profundidade a partir dos novos pré-requisitos; há ciclo se der para voltar à própria disciplina. Testada isoladamente (ciclo direto, indireto, cadeia, losango).
+- **Concorrência na secretaria**: a troca de pré-requisitos roda numa transação que trava a tabela `pre_requisitos` contra escrita (`LOCK TABLE ... IN SHARE ROW EXCLUSIVE MODE`). Sem isso, duas edições simultâneas (A exige B / B exige A) poderiam passar cada uma pela checagem de ciclo sem enxergar a outra. Leituras (ofertas, matrículas) não são bloqueadas.
+- **Telas**: nas ofertas, cada pré-requisito aparece como aprovado (✓) ou pendente (✗), com texto para leitores de tela, e o botão vira "Pré-requisito pendente"; na secretaria, a tabela mostra os pré-requisitos e uma janela permite marcá-los (a própria disciplina não aparece como opção).
+- **Seed**: IF669 exige IF668; IF671, IF672 e IF678 exigem IF669; IF675 exige IF674; IF680 exige IF674 e IF675. Todas as matrículas do seed respeitam os pré-requisitos.
+- **Testes**: unitários do service (pendente, reprovação, matrícula em curso, prioridade sobre "lotada", status nas ofertas) e da detecção de ciclos; integração pela API (matrícula, ofertas, definição, substituição, ciclos, inexistentes, permissão); e telas do aluno e da secretaria. Verificado por mutação: remover a checagem na matrícula ou a de ciclos faz testes falharem.
 
 ## Principais decisões
 
@@ -342,21 +373,22 @@ Os testes verificam **comportamento**, não implementação: cada caso diz o que
 
 ### Rastreabilidade das regras de negócio
 
-| #   | Regra                                                  | Onde está implementada                                                                              | Testes                                                                                                                                |
-| --- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Código da disciplina é único                           | `UNIQUE` em `disciplinas.codigo`, traduzido em 409 `CODIGO_DUPLICADO` no `secretaria.service.ts`    | `restricoes-banco.test.ts`, `secretaria.test.ts` (cadastro e edição), `telas-secretaria.test.tsx`                                     |
-| 2   | CH múltipla de 15, entre 15h e 120h                    | `chSchema` (400) em `secretaria.schemas.ts` + `CHECK disciplinas_ch_check`; validação no formulário | `restricoes-banco.test.ts`, `secretaria.test.ts` (10, 20, 125, 0, 7,5 recusadas; 15, 60, 120 aceitas), `telas-secretaria.test.tsx`    |
-| 3   | E-mail do professor é único                            | `UNIQUE` em `professores.email` (e-mail em minúsculas), 409 `EMAIL_DUPLICADO`                       | `restricoes-banco.test.ts`, `secretaria.test.ts` (inclusive com maiúsculas diferentes), `telas-secretaria.test.tsx`                   |
-| 4   | Turma tem disciplina, professor e ≥ 1 vaga             | `turmaSchema` (400) + `abrirTurma` (422 se não existem) + FKs e `CHECK turmas_vagas_check`          | `restricoes-banco.test.ts`, `secretaria.test.ts`, `telas-secretaria.test.tsx`                                                         |
-| 5   | Vagas nunca abaixo dos matriculados                    | `secretaria.service.ts` → `alterarVagas` (com `SELECT ... FOR UPDATE`); mínimo no formulário        | `secretaria.test.ts` (menor recusado, igual aceito, canceladas não contam, teste determinístico do lock), `telas-secretaria.test.tsx` |
-| 6   | Não matricular em turma lotada                         | `aluno.service.ts` → `matricular` (com `SELECT ... FOR UPDATE`)                                     | `aluno.service.test.ts`, `aluno.test.ts` (inclui teste determinístico do lock), `fluxo-completo.test.ts`                              |
-| 7   | Não matricular em disciplina aprovada (reprovada pode) | `aluno.service.ts` → `matricular`                                                                   | `aluno.service.test.ts`, `aluno.test.ts`                                                                                              |
-| 8   | Cancelar matrícula ativa devolve a vaga                | `aluno.service.ts` → `cancelarMatricula` + update condicional; vagas = contagem de ativas           | `aluno.service.test.ts`, `aluno.test.ts`, `fluxo-completo.test.ts`                                                                    |
-| 9   | Aluno só vê e altera as próprias matrículas            | `getAlunoId` (aluno vem do token) + consultas filtradas por aluno                                   | `aluno.service.test.ts`, `aluno.test.ts` (404 para matrícula alheia, `alunoId` no corpo ignorado), `http-pipeline.test.ts`            |
-| 10  | Classificação depende do curso do aluno                | `classificacao.ts`                                                                                  | `progresso.test.ts`, `aluno.test.ts` (ofertas e progresso de alunos de cursos diferentes)                                             |
-| 11  | Excedente de eletiva de perfil conta como livre        | `progresso.ts`                                                                                      | `progresso.test.ts`                                                                                                                   |
-| 12  | Só aprovadas integralizam; ativas = em curso           | `progresso.ts` + `aluno.service.ts` → `progresso` (só `APROVADO` e matrículas `ATIVA`)              | `progresso.test.ts`, `aluno.test.ts`, `fluxo-completo.test.ts`                                                                        |
-| 13  | Percentual ≤ 100% e faltante ≥ 0                       | `progresso.ts`                                                                                      | `progresso.test.ts`                                                                                                                   |
+| #   | Regra                                                  | Onde está implementada                                                                                   | Testes                                                                                                                                |
+| --- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Código da disciplina é único                           | `UNIQUE` em `disciplinas.codigo`, traduzido em 409 `CODIGO_DUPLICADO` no `secretaria.service.ts`         | `restricoes-banco.test.ts`, `secretaria.test.ts` (cadastro e edição), `telas-secretaria.test.tsx`                                     |
+| 2   | CH múltipla de 15, entre 15h e 120h                    | `chSchema` (400) em `secretaria.schemas.ts` + `CHECK disciplinas_ch_check`; validação no formulário      | `restricoes-banco.test.ts`, `secretaria.test.ts` (10, 20, 125, 0, 7,5 recusadas; 15, 60, 120 aceitas), `telas-secretaria.test.tsx`    |
+| 3   | E-mail do professor é único                            | `UNIQUE` em `professores.email` (e-mail em minúsculas), 409 `EMAIL_DUPLICADO`                            | `restricoes-banco.test.ts`, `secretaria.test.ts` (inclusive com maiúsculas diferentes), `telas-secretaria.test.tsx`                   |
+| 4   | Turma tem disciplina, professor e ≥ 1 vaga             | `turmaSchema` (400) + `abrirTurma` (422 se não existem) + FKs e `CHECK turmas_vagas_check`               | `restricoes-banco.test.ts`, `secretaria.test.ts`, `telas-secretaria.test.tsx`                                                         |
+| 5   | Vagas nunca abaixo dos matriculados                    | `secretaria.service.ts` → `alterarVagas` (com `SELECT ... FOR UPDATE`); mínimo no formulário             | `secretaria.test.ts` (menor recusado, igual aceito, canceladas não contam, teste determinístico do lock), `telas-secretaria.test.tsx` |
+| 6   | Não matricular em turma lotada                         | `aluno.service.ts` → `matricular` (com `SELECT ... FOR UPDATE`)                                          | `aluno.service.test.ts`, `aluno.test.ts` (inclui teste determinístico do lock), `fluxo-completo.test.ts`                              |
+| 7   | Não matricular em disciplina aprovada (reprovada pode) | `aluno.service.ts` → `matricular`                                                                        | `aluno.service.test.ts`, `aluno.test.ts`                                                                                              |
+| 8   | Cancelar matrícula ativa devolve a vaga                | `aluno.service.ts` → `cancelarMatricula` + update condicional; vagas = contagem de ativas                | `aluno.service.test.ts`, `aluno.test.ts`, `fluxo-completo.test.ts`                                                                    |
+| 9   | Aluno só vê e altera as próprias matrículas            | `getAlunoId` (aluno vem do token) + consultas filtradas por aluno                                        | `aluno.service.test.ts`, `aluno.test.ts` (404 para matrícula alheia, `alunoId` no corpo ignorado), `http-pipeline.test.ts`            |
+| 10  | Classificação depende do curso do aluno                | `classificacao.ts`                                                                                       | `progresso.test.ts`, `aluno.test.ts` (ofertas e progresso de alunos de cursos diferentes)                                             |
+| 11  | Excedente de eletiva de perfil conta como livre        | `progresso.ts`                                                                                           | `progresso.test.ts`                                                                                                                   |
+| 12  | Só aprovadas integralizam; ativas = em curso           | `progresso.ts` + `aluno.service.ts` → `progresso` (só `APROVADO` e matrículas `ATIVA`)                   | `progresso.test.ts`, `aluno.test.ts`, `fluxo-completo.test.ts`                                                                        |
+| 13  | Percentual ≤ 100% e faltante ≥ 0                       | `progresso.ts`                                                                                           | `progresso.test.ts`                                                                                                                   |
+| ★   | Pré-requisitos (requisito à escolha)                   | `aluno.service.ts` → `matricular`; `secretaria.service.ts` → `definirPreRequisitos`; `pre-requisitos.ts` | `aluno.service.test.ts`, `pre-requisitos.test.ts` (unit e integração), `pre-requisitos.test.tsx`                                      |
 
 ### Front-end: React + Vite + TypeScript
 
@@ -436,5 +468,5 @@ Os selects do formulário de turma carregam até 50 disciplinas e 50 professores
 | 5    | Front-end base               | ✅ Concluída |
 | 6    | Front-end do aluno           | ✅ Concluída |
 | 7    | Secretaria                   | ✅ Concluída |
-| 8    | Requisito à escolha          | ⏳ A fazer   |
+| 8    | Requisito à escolha          | ✅ Concluída |
 | 9    | Documentação final           | ⏳ A fazer   |

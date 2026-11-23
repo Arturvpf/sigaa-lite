@@ -28,7 +28,7 @@ export function setupIntegration() {
 async function limparBanco(prisma: PrismaClient) {
   await prisma.$executeRaw`
     TRUNCATE TABLE matriculas, historico_itens, turmas, alunos, estruturas_curriculares,
-                   professores, disciplinas, cursos, usuarios
+                   pre_requisitos, professores, disciplinas, cursos, usuarios
     RESTART IDENTITY CASCADE
   `;
 }
@@ -65,6 +65,11 @@ function criarFabrica(prisma: PrismaClient) {
 
     async disciplina(codigo: string, ch = 60, nome = `Disciplina ${codigo}`) {
       return prisma.disciplina.create({ data: { codigo, nome, ch } });
+    },
+
+    /** `disciplinaId` exige `preRequisitoId`. */
+    async preRequisito(disciplinaId: number, preRequisitoId: number) {
+      return prisma.preRequisito.create({ data: { disciplinaId, preRequisitoId } });
     },
 
     async naEstrutura(cursoId: number, disciplinaId: number, tipo: TipoDisciplina) {

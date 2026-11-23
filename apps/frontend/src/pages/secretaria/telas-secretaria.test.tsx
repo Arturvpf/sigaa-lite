@@ -17,8 +17,8 @@ function pagina<T>(items: T[]): Pagina<T> {
 }
 
 const disciplinas: Disciplina[] = [
-  { id: 1, codigo: 'IF668', nome: 'Introdução à Programação', ch: 60 },
-  { id: 2, codigo: 'IF671', nome: 'Banco de Dados', ch: 60 },
+  { id: 1, codigo: 'IF668', nome: 'Introdução à Programação', ch: 60, preRequisitos: [] },
+  { id: 2, codigo: 'IF671', nome: 'Banco de Dados', ch: 60, preRequisitos: [] },
 ];
 const professores: Professor[] = [
   { id: 1, nome: 'Maria Souza', email: 'maria@exemplo.edu.br' },

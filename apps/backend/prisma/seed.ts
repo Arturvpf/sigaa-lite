@@ -7,7 +7,10 @@
  * - Ana tem CH de eletiva de perfil acima do exigido (excedente vira livre — regra 11);
  * - Eduarda já ultrapassou o exigido em alguns grupos (percentual limitado a 100% — regra 13);
  * - há reprovações sendo recursadas e aprovações que bloqueiam nova matrícula (regras 7 e 12);
- * - IF676 está lotada e IF678 está com uma única vaga (regra 6).
+ * - IF676 está lotada e IF678 está com uma única vaga (regra 6);
+ * - pré-requisitos (requisito à escolha): Bruno (reprovado em IF669) não pode cursar IF671 nem
+ *   IF672, e Diego (calouro) não pode cursar IF669 sem antes ser aprovado em IF668.
+ *   As matrículas do seed respeitam os pré-requisitos.
  *
  * O seed é idempotente: apaga tudo e recria, então pode ser executado várias vezes.
  */
@@ -87,6 +90,16 @@ const cursos: {
     },
   },
 ];
+
+/** disciplina → pré-requisitos (precisam estar aprovados para cursar a disciplina). */
+const preRequisitos: Record<string, string[]> = {
+  IF669: ['IF668'], // Algoritmos exige Introdução à Programação
+  IF671: ['IF669'], // Banco de Dados exige Algoritmos
+  IF672: ['IF669'], // Engenharia de Software exige Algoritmos
+  IF675: ['IF674'], // Arquitetura exige Sistemas Digitais
+  IF678: ['IF669'], // Compiladores exige Algoritmos
+  IF680: ['IF674', 'IF675'], // Robótica exige Sistemas Digitais e Arquitetura
+};
 
 const professores = [
   { nome: 'Maria Souza', email: 'maria.souza@exemplo.edu.br' },
@@ -202,7 +215,7 @@ async function limparBanco() {
   // RESTART IDENTITY faz os ids recomeçarem em 1 a cada execução.
   await prisma.$executeRaw`
     TRUNCATE TABLE matriculas, historico_itens, turmas, alunos, estruturas_curriculares,
-                   professores, disciplinas, cursos, usuarios
+                   pre_requisitos, professores, disciplinas, cursos, usuarios
     RESTART IDENTITY CASCADE
   `;
 }
@@ -220,6 +233,15 @@ async function main() {
     if (!id) throw new Error(`Disciplina ${codigo} não existe no seed`);
     return id;
   };
+
+  await prisma.preRequisito.createMany({
+    data: Object.entries(preRequisitos).flatMap(([codigo, exigidas]) =>
+      exigidas.map((exigida) => ({
+        disciplinaId: idDaDisciplina(codigo),
+        preRequisitoId: idDaDisciplina(exigida),
+      })),
+    ),
+  });
 
   const cursoId = new Map<string, number>();
   for (const { estrutura, ...dados } of cursos) {

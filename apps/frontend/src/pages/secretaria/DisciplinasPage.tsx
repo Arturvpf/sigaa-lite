@@ -9,6 +9,7 @@ import { useToast } from '../../components/toast/toast-context';
 import { errosDaApi, type ErrosDeCampo, validarDisciplina } from '../../forms/validacao';
 import { useParametrosLista } from '../../hooks/useParametrosLista';
 import { useDisciplinas, useSalvarDisciplina } from '../../hooks/useSecretaria';
+import { FormularioPreRequisitos } from './FormularioPreRequisitos';
 
 /** null = fechado; 'nova' = cadastro; Disciplina = edição. */
 type Formulario = null | 'nova' | Disciplina;
@@ -17,6 +18,7 @@ export function DisciplinasPage() {
   const { busca, pagina, setBusca, setPagina } = useParametrosLista();
   const disciplinas = useDisciplinas(busca, pagina);
   const [formulario, setFormulario] = useState<Formulario>(null);
+  const [preRequisitosDe, setPreRequisitosDe] = useState<Disciplina | null>(null);
 
   return (
     <section>
@@ -56,6 +58,7 @@ export function DisciplinasPage() {
                 <th scope="col" className="tabela__numero">
                   CH
                 </th>
+                <th scope="col">Pré-requisitos</th>
                 <th scope="col" className="tabela__acoes">
                   <span className="visualmente-oculto">Ações</span>
                 </th>
@@ -67,7 +70,24 @@ export function DisciplinasPage() {
                   <td className="codigo">{disciplina.codigo}</td>
                   <td>{disciplina.nome}</td>
                   <td className="tabela__numero">{disciplina.ch}h</td>
+                  <td>
+                    {disciplina.preRequisitos.length > 0 ? (
+                      <span className="codigo">
+                        {disciplina.preRequisitos.map((p) => p.codigo).join(', ')}
+                      </span>
+                    ) : (
+                      <span className="texto-suave">—</span>
+                    )}
+                  </td>
                   <td className="tabela__acoes">
+                    <button
+                      type="button"
+                      className="botao botao--discreto"
+                      onClick={() => setPreRequisitosDe(disciplina)}
+                      aria-label={`Pré-requisitos de ${disciplina.codigo}`}
+                    >
+                      Pré-requisitos
+                    </button>{' '}
                     <button
                       type="button"
                       className="botao botao--discreto"
@@ -88,6 +108,12 @@ export function DisciplinasPage() {
         <FormularioDisciplina
           disciplina={formulario === 'nova' ? undefined : formulario}
           onFechar={() => setFormulario(null)}
+        />
+      )}
+      {preRequisitosDe && (
+        <FormularioPreRequisitos
+          disciplina={preRequisitosDe}
+          onFechar={() => setPreRequisitosDe(null)}
         />
       )}
     </section>

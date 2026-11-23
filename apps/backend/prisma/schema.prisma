@@ -69,7 +69,26 @@ model Disciplina {
   turmas     Turma[]
   historico  HistoricoItem[]
 
+  /// Disciplinas que precisam estar aprovadas antes de cursar esta (requisito à escolha).
+  preRequisitos PreRequisito[] @relation("DisciplinaExige")
+  /// Disciplinas que exigem esta como pré-requisito.
+  exigidaPor    PreRequisito[] @relation("PreRequisitoDe")
+
   @@map("disciplinas")
+}
+
+/// "disciplina exige preRequisito". Uma disciplina não exige a si mesma (CHECK na migration);
+/// a ausência de ciclos é validada na API.
+model PreRequisito {
+  disciplinaId   Int @map("disciplina_id")
+  preRequisitoId Int @map("pre_requisito_id")
+
+  disciplina   Disciplina @relation("DisciplinaExige", fields: [disciplinaId], references: [id], onDelete: Cascade)
+  preRequisito Disciplina @relation("PreRequisitoDe", fields: [preRequisitoId], references: [id], onDelete: Restrict)
+
+  @@id([disciplinaId, preRequisitoId])
+  @@index([preRequisitoId])
+  @@map("pre_requisitos")
 }
 
 /// Classificação de uma disciplina na estrutura de um curso.

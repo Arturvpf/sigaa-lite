@@ -184,6 +184,91 @@ describe('AlunoService', () => {
     });
   });
 
+  describe('pré-requisitos (requisito à escolha)', () => {
+    const PRE_A = DISCIPLINA + 20;
+    const PRE_B = DISCIPLINA + 21;
+
+    beforeEach(() => {
+      fake.dados.disciplinas.push(
+        { id: PRE_A, codigo: 'IF100', nome: 'Pré A', ch: 60 },
+        { id: PRE_B, codigo: 'IF200', nome: 'Pré B', ch: 60 },
+      );
+      fake.dados.preRequisitos.push(
+        { disciplinaId: DISCIPLINA, preRequisitoId: PRE_A },
+        { disciplinaId: DISCIPLINA, preRequisitoId: PRE_B },
+      );
+    });
+
+    it('recusa quando falta aprovação em algum pré-requisito e diz quais faltam', async () => {
+      fake.dados.historico.push({ alunoId: ANA, disciplinaId: PRE_A, situacao: 'APROVADO' });
+
+      const erro = await matricular(ANA, turma(30)).catch((e) => e);
+
+      expect(erro).toMatchObject({
+        status: 422,
+        code: 'PRE_REQUISITO_PENDENTE',
+        message: 'Você precisa ser aprovado antes em: IF200.',
+        details: { pendentes: [{ id: PRE_B, codigo: 'IF200', nome: 'Pré B' }] },
+      });
+    });
+
+    it('aceita quando todos os pré-requisitos estão aprovados', async () => {
+      fake.dados.historico.push(
+        { alunoId: ANA, disciplinaId: PRE_A, situacao: 'APROVADO' },
+        { alunoId: ANA, disciplinaId: PRE_B, situacao: 'APROVADO' },
+      );
+
+      await expect(matricular(ANA, turma(30))).resolves.toBeDefined();
+    });
+
+    it('reprovação no pré-requisito não atende', async () => {
+      fake.dados.historico.push(
+        { alunoId: ANA, disciplinaId: PRE_A, situacao: 'APROVADO' },
+        { alunoId: ANA, disciplinaId: PRE_B, situacao: 'REPROVADO' },
+      );
+
+      expect(await codigoDoErro(matricular(ANA, turma(30)))).toMatchObject({
+        code: 'PRE_REQUISITO_PENDENTE',
+      });
+    });
+
+    it('matrícula em curso no pré-requisito não atende (não cursa os dois juntos)', async () => {
+      fake.dados.historico.push({ alunoId: ANA, disciplinaId: PRE_A, situacao: 'APROVADO' });
+      await matricular(ANA, turma(30, PRE_B));
+
+      expect(await codigoDoErro(matricular(ANA, turma(30)))).toMatchObject({
+        code: 'PRE_REQUISITO_PENDENTE',
+      });
+    });
+
+    it('pré-requisito pendente tem prioridade sobre turma lotada', async () => {
+      const t = turma(1);
+      fake.dados.matriculas.push({
+        id: fake.novoId(),
+        alunoId: CARLA,
+        turmaId: t,
+        situacao: 'ATIVA',
+        criadaEm: new Date(),
+      });
+
+      expect(await codigoDoErro(matricular(ANA, t))).toMatchObject({
+        code: 'PRE_REQUISITO_PENDENTE',
+      });
+    });
+
+    it('as ofertas mostram cada pré-requisito e se está atendido', async () => {
+      fake.dados.historico.push({ alunoId: ANA, disciplinaId: PRE_A, situacao: 'APROVADO' });
+      turma(30);
+
+      const ofertas = await service.listarOfertas(ANA, { page: 1, pageSize: 10, q: undefined });
+
+      expect(ofertas.items[0]?.preRequisitos).toEqual([
+        { id: PRE_A, codigo: 'IF100', nome: 'Pré A', atendido: true },
+        { id: PRE_B, codigo: 'IF200', nome: 'Pré B', atendido: false },
+      ]);
+    });
+  });
+
   it('aluno inexistente (token de aluno removido) responde 401', async () => {
     expect(await codigoDoErro(service.listarMatriculas(999))).toEqual({
       status: 401,
