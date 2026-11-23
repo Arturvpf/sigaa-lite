@@ -15,13 +15,16 @@ const texto = (campo: string, max: number) =>
 
 export const idParamsSchema = z.object({ id: id('id') });
 
-/** Regra 2: CH múltipla de 15, entre 15h e 120h. */
+/**
+ * Regra 2: CH múltipla de 15, entre 15h e 120h.
+ * Uma checagem só, com uma mensagem completa: o usuário vê de uma vez quais valores valem.
+ */
+export const MENSAGEM_CH =
+  'A carga horária deve ser múltipla de 15, entre 15h e 120h (ex.: 30, 45, 60).';
+
 export const chSchema = z
   .number({ error: 'Informe a carga horária' })
-  .int('A carga horária deve ser um número inteiro')
-  .min(15, 'A carga horária deve ser de no mínimo 15h')
-  .max(120, 'A carga horária deve ser de no máximo 120h')
-  .refine((ch) => ch % 15 === 0, 'A carga horária deve ser múltipla de 15');
+  .refine((ch) => Number.isInteger(ch) && ch >= 15 && ch <= 120 && ch % 15 === 0, MENSAGEM_CH);
 
 export const disciplinaSchema = z.object({
   // Código normalizado em maiúsculas, sem espaços: "if 668" e "IF668" são o mesmo código
