@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef } from 'react';
-import type { Oferta } from '../../api/aluno';
+import { type Oferta, type ProgressoGrupo, ROTULO_CLASSIFICACAO } from '../../api/aluno';
 import { useAuth } from '../../auth/auth-context';
-import { Icone } from '../../components/Icone';
+import { AnelProgresso } from '../../components/AnelProgresso';
 import { useProgresso } from '../../hooks/useAluno';
 import { calcularImpacto } from './impacto';
 
@@ -47,7 +47,9 @@ export function ConfirmarMatricula({
       >
         <div className="folha__alca" aria-hidden="true" />
         <div className="folha__cabecalho">
-          <span className="sobretitulo">Confirmar matrícula</span>
+          <span className="sobretitulo" aria-hidden="true">
+            $ matricular {disciplina.codigo}
+          </span>
           <h2 id={tituloId}>
             {disciplina.codigo} · {disciplina.nome}
           </h2>
@@ -118,6 +120,7 @@ function ImpactoNoProgresso({ oferta }: { oferta: Oferta }) {
   if (progresso.isError) return null;
 
   let texto;
+  let comparacao = null;
   if (progresso.isPending) {
     texto = <span>Calculando…</span>;
   } else if (oferta.classificacao === 'OBRIGATORIA') {
@@ -153,12 +156,70 @@ function ImpactoNoProgresso({ oferta }: { oferta: Oferta }) {
       );
   }
 
+  if (progresso.isSuccess) {
+    const { noGrupo } = calcularImpacto(oferta.classificacao, ch, progresso.data);
+    // O grupo que recebe a maior parte da CH: o da disciplina, ou eletiva livre quando
+    // a eletiva de perfil já não cabe no perfil (regra 11)
+    const destino = noGrupo > 0 ? oferta.classificacao : 'ELETIVA_LIVRE';
+    const horas = noGrupo > 0 ? noGrupo : ch;
+    const grupo = progresso.data.grupos.find((g) => g.grupo === destino);
+    if (grupo) comparacao = <AntesDepois grupo={grupo} horas={horas} />;
+  }
+
   return (
     <div className="impacto" role="note" aria-label="Como conta no seu progresso">
-      <Icone nome="grafico" />
-      <div>
-        <strong className="impacto__titulo">Como conta no seu progresso</strong>
-        {texto}
+      <span className="impacto__titulo">Como conta no seu progresso</span>
+      {comparacao}
+      <p className="impacto__texto">{texto}</p>
+    </div>
+  );
+}
+
+/**
+ * Anéis "hoje → com esta matrícula" do grupo que recebe a CH. "Hoje" soma o que já foi
+ * integralizado com o que está em curso, porque é o que a nova matrícula vai encontrar.
+ */
+function AntesDepois({ grupo, horas }: { grupo: ProgressoGrupo; horas: number }) {
+  const rotulo = ROTULO_CLASSIFICACAO[grupo.grupo].toLowerCase();
+  const hoje = grupo.chIntegralizada + grupo.chEmCurso;
+  const depois = hoje + horas;
+  const percentual = (h: number) =>
+    grupo.chExigida === 0 ? 100 : Math.min(100, Math.floor((h / grupo.chExigida) * 100));
+  const completa = depois >= grupo.chExigida;
+
+  return (
+    <div className="impacto__comparacao">
+      <div className="impacto__lado">
+        <AnelProgresso
+          grupo={grupo.grupo}
+          percentual={percentual(hoje)}
+          tamanho={48}
+          rotulo={`${ROTULO_CLASSIFICACAO[grupo.grupo]} hoje: ${percentual(hoje)}%`}
+        />
+        <span>
+          <span className="anel__valor">
+            {hoje}h<span className="texto-suave">/{grupo.chExigida}h</span>
+          </span>
+          <span className="anel__rotulo">{rotulo} hoje</span>
+        </span>
+      </div>
+      <span className="impacto__seta" aria-hidden="true">
+        →
+      </span>
+      <div className="impacto__lado">
+        <AnelProgresso
+          grupo={grupo.grupo}
+          percentual={percentual(depois)}
+          tamanho={48}
+          marcarConcluido
+          rotulo={`${ROTULO_CLASSIFICACAO[grupo.grupo]} com esta matrícula: ${
+            completa ? 'completa' : `${percentual(depois)}%`
+          }`}
+        />
+        <span>
+          <span className="anel__valor">+{horas}h</span>
+          <span className="anel__rotulo">{completa ? `completa ${rotulo}` : rotulo}</span>
+        </span>
       </div>
     </div>
   );

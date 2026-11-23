@@ -10,6 +10,7 @@ import {
 import { Paginacao } from '../../components/Paginacao';
 import { useMatricular, useOfertas } from '../../hooks/useAluno';
 import { useParametrosLista } from '../../hooks/useParametrosLista';
+import { AneisProgresso } from './AneisProgresso';
 import { ConfirmarMatricula } from './ConfirmarMatricula';
 import { OfertaCard } from './OfertaCard';
 
@@ -22,6 +23,8 @@ export function OfertasPage() {
 
   return (
     <section>
+      <AneisProgresso />
+
       <div className="cabecalho-pagina">
         <h1>Ofertas do semestre</h1>
         {ofertas.isFetching && !ofertas.isPending && (
@@ -36,7 +39,7 @@ export function OfertasPage() {
           valor={busca}
           onBuscar={setBusca}
           rotulo="Buscar disciplina por código ou nome"
-          placeholder="Buscar por código ou nome (ex.: IF671)"
+          placeholder="código ou nome (ex.: IF671)"
         />
       </div>
 
@@ -60,7 +63,7 @@ export function OfertasPage() {
         </div>
       ) : (
         <>
-          <ul className="lista" aria-label="Ofertas">
+          <ul className="lista lista--ofertas" aria-label="Ofertas">
             {ofertas.data.items.map((oferta) => (
               <OfertaCard
                 key={oferta.id}
