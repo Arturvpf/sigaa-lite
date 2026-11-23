@@ -108,13 +108,13 @@ Capturas do sistema rodando com os dados do seed. As telas do aluno são mostrad
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src="docs/imagens/aluno-2-ofertas.jpg" alt="Ofertas do semestre: cada turma com classificação, pré-requisitos, barra de ocupação e vagas" width="240"><br><b>Ofertas</b><br><sub>Classificação para o curso do aluno, pré-requisitos, ocupação e vagas. Busca e página ficam na URL.</sub></td>
-    <td align="center" width="33%"><img src="docs/imagens/aluno-3-confirmar-matricula.jpg" alt="Confirmação de matrícula com resumo da turma e o bloco Como conta no seu progresso" width="240"><br><b>Confirmar matrícula</b><br><sub>Resumo da turma e como a CH vai contar no progresso (aqui, perfil completo → conta como eletiva livre).</sub></td>
+    <td align="center" width="33%"><img src="docs/imagens/aluno-2-ofertas.jpg" alt="Ofertas do semestre: anéis de progresso no topo e cada turma com classificação, pré-requisitos, barra de ocupação e vagas" width="240"><br><b>Ofertas</b><br><sub>Anéis com o progresso por grupo no topo; em cada turma, classificação para o curso do aluno, pré-requisitos, ocupação e vagas. Busca e página ficam na URL.</sub></td>
+    <td align="center" width="33%"><img src="docs/imagens/aluno-3-confirmar-matricula.jpg" alt="Confirmação de matrícula com resumo da turma e anéis de eletiva livre antes e depois da matrícula" width="240"><br><b>Confirmar matrícula</b><br><sub>Resumo da turma e como a CH vai contar no progresso, com anéis "hoje → com esta matrícula" (aqui, perfil completo → as 60h completam a eletiva livre).</sub></td>
     <td align="center" width="33%"><img src="docs/imagens/aluno-6-pre-requisito-pendente.jpg" alt="Ofertas do aluno bruno com o pré-requisito IF669 pendente e o botão bloqueado" width="240"><br><b>Pré-requisito pendente</b><br><sub>Login <code>bruno</code>: sem IF669 aprovada, o botão fica bloqueado (requisito à escolha).</sub></td>
   </tr>
   <tr>
     <td align="center"><img src="docs/imagens/aluno-4-minhas-matriculas.jpg" alt="Minhas matrículas: lista das matrículas ativas com o botão Cancelar matrícula" width="240"><br><b>Minhas matrículas</b><br><sub>Só as matrículas ativas do próprio aluno; cancelar pede confirmação e devolve a vaga.</sub></td>
-    <td align="center"><img src="docs/imagens/aluno-5-progresso.jpg" alt="Progresso no curso com resumo e barras por grupo" width="240"><br><b>Progresso</b><br><sub>CH exigida, integralizada, em curso (listrada) e o que falta, por grupo.</sub></td>
+    <td align="center"><img src="docs/imagens/aluno-5-progresso.jpg" alt="Progresso no curso com resumo, anéis e barras por grupo" width="240"><br><b>Progresso</b><br><sub>CH exigida, integralizada, em curso (listrada) e o que falta, por grupo.</sub></td>
     <td align="center"><img src="docs/imagens/aluno-1-login.jpg" alt="Tela de login" width="240"><br><b>Login</b><br><sub>Só o nome de usuário; a senha é opcional.</sub></td>
   </tr>
 </table>
@@ -505,7 +505,7 @@ apps/frontend/src/
 
 **Estados de interface reutilizáveis**: `Carregando`, `ListaVazia` (não há dados), `SemResultados` (a busca não achou nada, com "Limpar busca") e `ErroAoCarregar` (com "Tentar novamente"); e **toasts** para confirmar ações e explicar recusas de regra de negócio (ex.: "Esta turma não tem mais vagas disponíveis."). Erros usam `role="alert"` para leitores de tela.
 
-**CSS próprio, mobile-first**, com variáveis de cor e espaçamento e modo escuro automático; sem framework de UI, para manter o projeto pequeno e o layout fácil de explicar. O visual (tipografia Space Grotesk nos títulos e Inter no texto, um único azul de destaque, classificações em âmbar, violeta e verde que também diferem em claridade, barras de ocupação) foi definido primeiro num **protótipo** das telas principais e depois aplicado ao código.
+**CSS próprio, mobile-first**, com variáveis de cor e espaçamento; sem framework de UI, para manter o projeto pequeno e o layout fácil de explicar. O visual ("noturno técnico") é escuro e denso em dados: Inter no texto, **JetBrains Mono para códigos de disciplina e números**, um único verde-limão de destaque, classificações em âmbar, violeta e verde que também diferem em claridade e vêm sempre com texto. Dois elementos próprios: **anéis de progresso** por grupo (no topo das ofertas, na tela de progresso e na confirmação, como "hoje → com esta matrícula") e a **barra de vagas segmentada** em turmas pequenas (um segmento por vaga). O visual foi escolhido entre três direções desenhadas antes num **protótipo** das telas principais e depois aplicado ao código. Anéis e barras são decorativos para leitores de tela: os números aparecem sempre em texto.
 
 **Testes do front-end** (Vitest + Testing Library + jsdom): montam as **rotas reais** num roteador em memória e simulam a API por rota (`simularApi`). Cobrem o cliente HTTP, guardas por perfil, login (sucesso, recusa, falha de rede, volta à página pedida), logout, sessão expirada, paginação, busca com debounce, estados de erro, busca/página na URL e as telas do aluno. Rotas não simuladas respondem 500, para um teste não passar por acidente.
 

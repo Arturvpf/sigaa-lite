@@ -1,4 +1,5 @@
 import { type ProgressoGrupo, ROTULO_CLASSIFICACAO } from '../../api/aluno';
+import { AnelProgresso } from '../../components/AnelProgresso';
 import { Carregando, ErroAoCarregar } from '../../components/EstadoLista';
 import { useProgresso } from '../../hooks/useAluno';
 
@@ -70,7 +71,15 @@ function CartaoGrupo({ grupo }: { grupo: ProgressoGrupo }) {
   return (
     <li className="cartao grupo-progresso">
       <div className="grupo-progresso__cabecalho">
-        <h2>{rotulo}</h2>
+        <div className="grupo-progresso__titulo">
+          <AnelProgresso
+            grupo={grupo.grupo}
+            percentual={grupo.percentual}
+            tamanho={40}
+            marcarConcluido
+          />
+          <h2>{rotulo}</h2>
+        </div>
         <span className={`percentual ${concluido ? 'percentual--concluido' : ''}`}>
           {grupo.percentual}%
         </span>
