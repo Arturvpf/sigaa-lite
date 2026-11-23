@@ -165,7 +165,9 @@ Usuario 1──0..1 Aluno N──1 Curso 1──N EstruturaCurricular N──1 D
                   ├──N HistoricoItem N──────────────────────────────┤
                   │                                                 │
                   └──N Matricula N──1 Turma N──1 Professor          │
-                                        └──────N──1─────────────────┘
+                                        └──────N──1─────────────────┤
+                                                                    │
+                      PreRequisito (disciplina exige disciplina) N──┘
 ```
 
 | Entidade              | Restrições principais                                                                     |
@@ -179,6 +181,7 @@ Usuario 1──0..1 Aluno N──1 Curso 1──N EstruturaCurricular N──1 D
 | `Aluno`               | Pertence a um curso e a um usuário                                                        |
 | `Matricula`           | Situação `ATIVA` ou `CANCELADA`; **no máximo uma matrícula ativa por (aluno, turma)**     |
 | `HistoricoItem`       | Situação `APROVADO` ou `REPROVADO`, com semestre; único por (aluno, disciplina, semestre) |
+| `PreRequisito`        | Chave primária `(disciplina, pré-requisito)`; a disciplina não pode exigir a si mesma     |
 
 ## Scripts de banco (na raiz)
 
@@ -242,7 +245,8 @@ Cada **oferta** traz:
   "lotada": true,
   "classificacao": "ELETIVA_PERFIL",
   "matriculaId": null,
-  "jaAprovado": false
+  "jaAprovado": false,
+  "preRequisitos": []
 }
 ```
 
@@ -265,7 +269,7 @@ Cada **grupo** do progresso traz:
 
 ### Secretaria
 
-Todas exigem token de um usuário com perfil `SECRETARIA` (401 sem token, 403 com outro perfil). Listagens aceitam `?q=&page=&pageSize=`.
+Todas exigem token de um usuário com perfil `SECRETARIA` (401 sem token, 403 com outro perfil). Listagens aceitam `?q=&page=&pageSize=`. Toda disciplina devolvida pela API traz também `preRequisitos: [{ id, codigo, nome }]`.
 
 | Método | Rota                                         | Entrada                                           | Resposta                                                                                | Erros                                                                                                    |
 | ------ | -------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -420,7 +424,7 @@ Como isso é testado: disparar requisições simultâneas raramente acerta a jan
 
 Escolhi o lock de linha em vez de um contador com update condicional porque as vagas são **calculadas** (contagem de matrículas ativas), então não há uma coluna para atualizar condicionalmente. O lock é só da turma em questão: matrículas em turmas diferentes não se bloqueiam.
 
-Ordem das verificações, dentro da transação: turma existe (404) → disciplina já aprovada (422) → já matriculado nesta turma (409) ou em outra turma da mesma disciplina (422) → turma lotada (422). Assim, quem já está matriculado numa turma lotada recebe a mensagem certa ("já matriculado"), e não "turma lotada".
+Ordem das verificações, dentro da transação: turma existe (404) → disciplina já aprovada (422) → já matriculado nesta turma (409) ou em outra turma da mesma disciplina (422) → pré-requisito pendente (422) → turma lotada (422). Assim, quem já está matriculado numa turma lotada recebe a mensagem certa ("já matriculado"), e quem não tem o pré-requisito fica sabendo disso, e não que a turma está cheia.
 
 Decisões:
 
@@ -484,8 +488,8 @@ apps/frontend/src/
 ├── api/                  # cliente HTTP único, ApiError e configuração do React Query
 ├── auth/                 # sessão, AuthProvider, useAuth e guardas de rota
 ├── layouts/AppLayout.tsx # cabeçalho com usuário e "Sair" + navegação da área
-├── components/           # estados de lista, toast, busca, paginação
-├── hooks/                # busca e página na URL
+├── components/           # estados de lista, toast, busca, paginação, diálogos, anéis e barra de vagas
+├── hooks/                # consultas do aluno e da secretaria; busca e página na URL
 └── pages/                # telas
 ```
 
@@ -530,8 +534,6 @@ Verificado manualmente no navegador em **360×780**: login, busca, matrícula, c
 
 Os **formulários validam antes de enviar**, espelhando o back-end (CH múltipla de 15 entre 15 e 120, e-mail válido, vagas ≥ 1 e ≥ matriculados), para dar retorno imediato sem ida ao servidor. A API valida de novo e é quem decide: recusas ligadas a um campo (código ou e-mail duplicado, vagas abaixo dos matriculados porque alguém se matriculou com a janela aberta) aparecem **embaixo do campo**; erros sem campo aparecem no formulário. Cada campo liga rótulo, ajuda e erro por `aria-describedby`.
 
-Os selects do formulário de turma carregam até 50 disciplinas e 50 professores (o limite de `pageSize` da API). Com um catálogo maior, o certo seria um campo com busca (autocomplete).
-
 ### Decisões da secretaria
 
 - **Unicidade pelo banco, sem consultar antes**: em vez de "existe? então recusa; senão insere" (que deixa uma janela para duas requisições simultâneas com o mesmo código), o service tenta inserir e traduz a violação do `UNIQUE` em 409 com mensagem clara.
@@ -546,7 +548,7 @@ Tudo o que o enunciado pede está implementado. Ficaram de fora, conscientemente
 
 - **Telas da secretaria responsivas**: funcionam em desktop, como o enunciado permite; em telas estreitas, as tabelas não foram adaptadas.
 - **Editar/remover professores e remover disciplinas e turmas**: não fazem parte dos requisitos e exigiriam regras novas (ex.: o que fazer com matrículas de uma turma removida).
-- **Selects de disciplina e professor ao abrir turma** carregam até 50 itens (o limite de `pageSize`); suficiente para o seed, mas não para um catálogo real.
+- **Selects de disciplina e professor ao abrir turma** carregam até 50 itens (o limite de `pageSize`); suficiente para o seed, mas não para um catálogo real, que pediria um campo com busca (autocomplete).
 - **Testes de ponta a ponta no navegador** (ex.: Playwright): o comportamento das telas está coberto por testes de componente com as rotas reais, e o fluxo foi verificado manualmente no navegador em 360px e em desktop.
 - **CI**: não deixei pipeline no repositório. Para conferir que a suíte não depende da minha máquina, ela foi executada em Linux com Node 22 e 24 e PostgreSQL 17, e passou.
 
@@ -560,7 +562,7 @@ Tudo o que o enunciado pede está implementado. Ficaram de fora, conscientemente
 - **Testes E2E** com Playwright, incluindo a verificação automática de "sem rolagem horizontal em 360px".
 - **CI no GitLab** (`.gitlab-ci.yml`) com PostgreSQL como serviço, rodando lint, testes e build a cada merge request.
 - **CH aprovada guardada no histórico**: hoje o progresso usa a CH atual da disciplina; se a secretaria alterar a CH, o progresso de quem já foi aprovado muda junto.
-- **Campo com busca (autocomplete)** nos selects da secretaria e paginação em "Minhas matrículas".
+- **Paginação em "Minhas matrículas"**, se um aluno puder ter muitas matrículas.
 - **Auditoria** de quem alterou vagas e pré-requisitos, e logs estruturados na API.
 - **Períodos letivos**: o enunciado pede um único semestre; num sistema real, turmas e matrículas teriam semestre.
 - **Docker para a aplicação inteira** (API e front também no compose), para rodar tudo com um comando.
