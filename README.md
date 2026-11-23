@@ -5,7 +5,9 @@ Sistema de matrícula de graduação com dois perfis de acesso — **Secretaria*
 - **Secretaria:** cadastra disciplinas e professores e abre turmas com número de vagas.
 - **Aluno:** matricula-se nas turmas do semestre e acompanha quanto falta para concluir o curso.
 
-> 🚧 Em desenvolvimento. Este README é atualizado a cada fase.
+**O que está entregue:** login por nome de usuário; fluxo completo do aluno (ofertas com classificação por curso, matrícula, cancelamento e progresso), funcionando em celular a partir de 360px; telas da secretaria (disciplinas, professores e turmas); as **13 regras de negócio** com testes automatizados; e o requisito à escolha, **pré-requisitos entre disciplinas**, do back-end ao front-end. São 166 testes no back-end (unitários e de integração com PostgreSQL) e 61 no front-end.
+
+**Atalhos:** [como rodar](#como-rodar-do-zero) · [roteiro para avaliar](#roteiro-rápido-para-avaliar) · [API](#api) · [requisito à escolha](#requisito-à-escolha-pré-requisitos-entre-disciplinas) · [decisões](#principais-decisões) · [rastreabilidade das regras](#rastreabilidade-das-regras-de-negócio) · [o que ficou de fora](#o-que-ficou-de-fora) · [com mais tempo](#o-que-eu-faria-com-mais-tempo)
 
 ## Estrutura do repositório (monorepo)
 
@@ -50,9 +52,29 @@ npm run db:seed
 npm run dev
 ```
 
+Depois, abra **http://localhost:5173** e entre com um dos [usuários do seed](#usuários-do-seed) (ex.: `ana` ou `secretaria`). Para rodar os testes: `npm test` (com o banco no ar).
+
 > No PowerShell, use `Copy-Item` no lugar de `cp`.
 >
 > O `npm install` já gera o Prisma Client (`postinstall`). Para recomeçar do zero a qualquer momento: `npm run db:reset` (apaga o banco, reaplica as migrations e roda o seed).
+
+Este passo a passo foi validado clonando o repositório numa pasta limpa, com um banco novo, e seguindo exatamente os comandos acima.
+
+**Se algo der errado:**
+
+- _Porta 5432 ocupada_ (outro PostgreSQL na máquina): troque o mapeamento em `docker-compose.yml` (ex.: `'5433:5432'`) e a porta em `DATABASE_URL` e `TEST_DATABASE_URL` no `apps/backend/.env`.
+- _"Não foi possível falar com o servidor" na tela de login_: a API não está no ar ou o front aponta para outro endereço (`VITE_API_URL` em `apps/frontend/.env`).
+- _Testes de integração falhando ao conectar_: o PostgreSQL precisa estar rodando (`docker compose up -d`); o banco de testes `sigaa_test` é criado pelo próprio compose.
+
+## Roteiro rápido para avaliar
+
+| Entre como   | Veja                                                                                                                                                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ana`        | **Progresso**: eletiva de perfil 100% e 45h excedentes contando como eletiva livre (regra 11). **Ofertas**: IF676 aparece como "Já aprovado"; IF678 tem uma única vaga. Matricule-se em IF673 e cancele em **Minhas matrículas**.                 |
+| `carla`      | As mesmas disciplinas com outra classificação (IF671 é eletiva de perfil para Engenharia, IF677 é livre). Tente IF676: **turma lotada**.                                                                                                          |
+| `bruno`      | **Pré-requisitos**: sem IF669 aprovada, IF671, IF672 e IF678 aparecem com "✗ IF669" e o botão "Pré-requisito pendente".                                                                                                                           |
+| `eduarda`    | Eletiva livre com 105h de 60h: o percentual para em 100% e "Falta" mostra "Concluído" (regra 13).                                                                                                                                                 |
+| `secretaria` | Cadastre uma disciplina com CH 20 (recusada) e com código existente (recusada). Em **Turmas**, tente reduzir as vagas de IF676 para 1 (há 2 matriculados). Em **Disciplinas → Pré-requisitos**, tente fazer IF668 exigir IF671 (ciclo, recusado). |
 
 ## Usuários do seed
 
@@ -456,17 +478,44 @@ Os selects do formulário de turma carregam até 50 disciplinas e 50 professores
 - **Regra 5 com o mesmo lock da matrícula**: alterar vagas trava a turma (`SELECT ... FOR UPDATE`) antes de contar os matriculados. Assim, uma matrícula simultânea não entra entre a contagem e a atualização. Há um teste determinístico para isso, e removendo o lock ele falha.
 - **Validação de CH com uma única mensagem**: "múltipla de 15, entre 15h e 120h (ex.: 30, 45, 60)", em vez de várias mensagens parciais para o mesmo valor.
 
-## Status
+## O que ficou de fora
 
-| Fase | Descrição                    | Status       |
-| ---- | ---------------------------- | ------------ |
-| 0    | Setup do monorepo            | ✅ Concluída |
-| 1    | Modelagem de dados e seed    | ✅ Concluída |
-| 2    | Autenticação e base da API   | ✅ Concluída |
-| 3    | Fluxo do aluno (back-end)    | ✅ Concluída |
-| 4    | Testes das regras de negócio | ✅ Concluída |
-| 5    | Front-end base               | ✅ Concluída |
-| 6    | Front-end do aluno           | ✅ Concluída |
-| 7    | Secretaria                   | ✅ Concluída |
-| 8    | Requisito à escolha          | ✅ Concluída |
-| 9    | Documentação final           | ⏳ A fazer   |
+Tudo o que o enunciado pede está implementado. Ficaram de fora, conscientemente:
+
+- **Telas da secretaria responsivas**: funcionam em desktop, como o enunciado permite; em telas estreitas, as tabelas não foram adaptadas.
+- **Editar/remover professores e remover disciplinas e turmas**: não fazem parte dos requisitos e exigiriam regras novas (ex.: o que fazer com matrículas de uma turma removida).
+- **Selects de disciplina e professor ao abrir turma** carregam até 50 itens (o limite de `pageSize`); suficiente para o seed, mas não para um catálogo real.
+- **Testes de ponta a ponta no navegador** (ex.: Playwright): o comportamento das telas está coberto por testes de componente com as rotas reais, e o fluxo foi verificado manualmente no navegador em 360px e em desktop.
+- **CI**: não deixei pipeline no repositório. Para conferir que a suíte não depende da minha máquina, ela foi executada em Linux com Node 22 e 24 e PostgreSQL 17, e passou.
+
+**Observação sobre o ambiente de desenvolvimento**: na máquina usada (Windows Insider), o processo do Node às vezes encerra com uma falha nativa (`0xC0000409`) durante os testes de integração — não é uma asserção falhando, e não acontece em Linux nem nos testes unitários. Se isso aparecer, rodar `npm test` de novo resolve.
+
+## O que eu faria com mais tempo
+
+- **Outro requisito**: choque de horário (horários por turma e recusa de sobreposição) e lista de espera para turmas lotadas, com promoção automática ao cancelar ou aumentar vagas.
+- **Sessão mais segura**: token em cookie `HttpOnly` + `SameSite` com renovação (refresh token), em vez de `localStorage`; limite de tentativas no login.
+- **Documentação da API gerada** (OpenAPI/Swagger) a partir dos próprios schemas Zod, para não manter a documentação à mão.
+- **Testes E2E** com Playwright, incluindo a verificação automática de "sem rolagem horizontal em 360px".
+- **CI no GitLab** (`.gitlab-ci.yml`) com PostgreSQL como serviço, rodando lint, testes e build a cada merge request.
+- **CH aprovada guardada no histórico**: hoje o progresso usa a CH atual da disciplina; se a secretaria alterar a CH, o progresso de quem já foi aprovado muda junto.
+- **Campo com busca (autocomplete)** nos selects da secretaria e paginação em "Minhas matrículas".
+- **Auditoria** de quem alterou vagas e pré-requisitos, e logs estruturados na API.
+- **Períodos letivos**: o enunciado pede um único semestre; num sistema real, turmas e matrículas teriam semestre.
+- **Docker para a aplicação inteira** (API e front também no compose), para rodar tudo com um comando.
+
+## Etapas do desenvolvimento
+
+O projeto foi construído em fases, cada uma em sua branch e merge request, com commits pequenos:
+
+| Fase | Descrição                              |
+| ---- | -------------------------------------- |
+| 0    | Setup do monorepo                      |
+| 1    | Modelagem de dados, migrations e seed  |
+| 2    | Autenticação e base da API             |
+| 3    | Fluxo do aluno no back-end             |
+| 4    | Testes das regras de negócio           |
+| 5    | Front-end base                         |
+| 6    | Telas do aluno                         |
+| 7    | Secretaria (back-end e front-end)      |
+| 8    | Requisito à escolha: pré-requisitos    |
+| 9    | Documentação final e validação do zero |
