@@ -65,3 +65,11 @@ export const turmaSchema = z.object({
 export type TurmaInput = z.output<typeof turmaSchema>;
 
 export const vagasBodySchema = z.object({ vagas: vagasSchema });
+
+/** Lista completa de pré-requisitos (substitui a atual). Repetições são ignoradas. */
+export const preRequisitosSchema = z.object({
+  preRequisitoIds: z
+    .array(id('preRequisitoIds'), { error: 'Informe a lista de pré-requisitos' })
+    .max(20, 'No máximo 20 pré-requisitos')
+    .transform((ids) => [...new Set(ids)]),
+});

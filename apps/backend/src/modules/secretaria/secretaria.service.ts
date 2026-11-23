@@ -1,6 +1,7 @@
 import { Prisma } from '../../generated/prisma/client.js';
 import { BusinessRuleError, ConflictError, NotFoundError } from '../../shared/errors/app-error.js';
 import { buildPage, type PaginationQuery, toSkipTake } from '../../shared/http/pagination.js';
+import { criariaCiclo } from './pre-requisitos.js';
 import type { SecretariaRepository } from './secretaria.repository.js';
 import type { DisciplinaInput, ProfessorInput, TurmaInput } from './secretaria.schemas.js';
 
@@ -20,6 +21,19 @@ const codigoDuplicado = (codigo: string) =>
 const disciplinaNaoEncontrada = () =>
   new NotFoundError('DISCIPLINA_NAO_ENCONTRADA', 'Disciplina não encontrada.');
 
+type DisciplinaDoBanco = {
+  id: number;
+  codigo: string;
+  nome: string;
+  ch: number;
+  preRequisitos: { preRequisito: { id: number; codigo: string; nome: string } }[];
+};
+
+/** Formato da API: pré-requisitos como lista simples de { id, codigo, nome }. */
+function paraDisciplinaDTO({ preRequisitos, ...disciplina }: DisciplinaDoBanco) {
+  return { ...disciplina, preRequisitos: preRequisitos.map((p) => p.preRequisito) };
+}
+
 export function createSecretariaService(deps: { repo: SecretariaRepository }) {
   const { repo } = deps;
 
@@ -28,13 +42,13 @@ export function createSecretariaService(deps: { repo: SecretariaRepository }) {
 
     async listarDisciplinas(query: PaginationQuery) {
       const { items, total } = await repo.listarDisciplinas({ q: query.q, ...toSkipTake(query) });
-      return buildPage(items, total, query);
+      return buildPage(items.map(paraDisciplinaDTO), total, query);
     },
 
     async buscarDisciplina(id: number) {
       const disciplina = await repo.buscarDisciplina(id);
       if (!disciplina) throw disciplinaNaoEncontrada();
-      return disciplina;
+      return paraDisciplinaDTO(disciplina);
     },
 
     /**
@@ -44,7 +58,7 @@ export function createSecretariaService(deps: { repo: SecretariaRepository }) {
      */
     async criarDisciplina(dados: DisciplinaInput) {
       try {
-        return await repo.criarDisciplina(dados);
+        return paraDisciplinaDTO(await repo.criarDisciplina(dados));
       } catch (error) {
         if (isDuplicado(error)) throw codigoDuplicado(dados.codigo);
         throw error;
@@ -54,12 +68,48 @@ export function createSecretariaService(deps: { repo: SecretariaRepository }) {
     /** O código pode ser editado (ex.: corrigir um erro de digitação), desde que continue único. */
     async atualizarDisciplina(id: number, dados: DisciplinaInput) {
       try {
-        return await repo.atualizarDisciplina(id, dados);
+        return paraDisciplinaDTO(await repo.atualizarDisciplina(id, dados));
       } catch (error) {
         if (isDuplicado(error)) throw codigoDuplicado(dados.codigo);
         if (isInexistente(error)) throw disciplinaNaoEncontrada();
         throw error;
       }
+    },
+
+    /**
+     * Requisito à escolha: substitui os pré-requisitos da disciplina.
+     * Recusa a própria disciplina, disciplinas inexistentes e qualquer ciclo.
+     */
+    async definirPreRequisitos(disciplinaId: number, preRequisitoIds: number[]) {
+      if (!(await repo.buscarDisciplina(disciplinaId))) throw disciplinaNaoEncontrada();
+
+      if (preRequisitoIds.includes(disciplinaId)) {
+        throw new BusinessRuleError(
+          'PRE_REQUISITO_INVALIDO',
+          'Uma disciplina não pode ser pré-requisito de si mesma.',
+        );
+      }
+      if ((await repo.contarDisciplinasExistentes(preRequisitoIds)) !== preRequisitoIds.length) {
+        throw new BusinessRuleError(
+          'PRE_REQUISITO_INEXISTENTE',
+          'Algum dos pré-requisitos informados não existe.',
+        );
+      }
+
+      await repo.transacao(async (tx) => {
+        await tx.travarPreRequisitos();
+        const arestas = await tx.listarArestasPreRequisitos();
+        if (criariaCiclo(arestas, disciplinaId, preRequisitoIds)) {
+          throw new BusinessRuleError(
+            'PRE_REQUISITO_CICLICO',
+            'Esses pré-requisitos criariam um ciclo: a disciplina acabaria exigindo a si mesma, ' +
+              'direta ou indiretamente.',
+          );
+        }
+        await tx.substituirPreRequisitos(disciplinaId, preRequisitoIds);
+      });
+
+      return paraDisciplinaDTO((await repo.buscarDisciplina(disciplinaId))!);
     },
 
     // --- Professores (regra 3) --------------------------------------------

@@ -4,6 +4,7 @@ import { parse } from '../../shared/http/validate.js';
 import {
   disciplinaSchema,
   idParamsSchema,
+  preRequisitosSchema,
   professorSchema,
   turmaSchema,
   vagasBodySchema,
@@ -34,6 +35,12 @@ export function createSecretariaController(service: SecretariaService) {
     atualizarDisciplina: (async (req, res) => {
       const { id } = parse(idParamsSchema, req.params);
       res.json(await service.atualizarDisciplina(id, parse(disciplinaSchema, req.body)));
+    }) satisfies RequestHandler,
+
+    definirPreRequisitos: (async (req, res) => {
+      const { id } = parse(idParamsSchema, req.params);
+      const { preRequisitoIds } = parse(preRequisitosSchema, req.body);
+      res.json(await service.definirPreRequisitos(id, preRequisitoIds));
     }) satisfies RequestHandler,
 
     listarProfessores: listar(service.listarProfessores),

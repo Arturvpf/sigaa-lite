@@ -12,6 +12,15 @@ interface Filtro {
 const contem = (q: string) => ({ contains: q, mode: 'insensitive' as const });
 
 const disciplinaSelect = { id: true, codigo: true, nome: true, ch: true } as const;
+
+/** Disciplina com os seus pré-requisitos (código e nome), para a listagem da secretaria. */
+const disciplinaComPreRequisitos = {
+  ...disciplinaSelect,
+  preRequisitos: {
+    select: { preRequisito: { select: { id: true, codigo: true, nome: true } } },
+    orderBy: { preRequisito: { codigo: 'asc' } },
+  },
+} as const;
 const professorSelect = { id: true, nome: true, email: true } as const;
 
 /** Consultas da secretaria. Sem regra de negócio. */
@@ -27,7 +36,7 @@ function consultas(db: Db) {
           skip,
           take,
           orderBy: { codigo: 'asc' },
-          select: disciplinaSelect,
+          select: disciplinaComPreRequisitos,
         }),
         db.disciplina.count({ where }),
       ]);
@@ -35,15 +44,45 @@ function consultas(db: Db) {
     },
 
     buscarDisciplina(id: number) {
-      return db.disciplina.findUnique({ where: { id }, select: disciplinaSelect });
+      return db.disciplina.findUnique({ where: { id }, select: disciplinaComPreRequisitos });
+    },
+
+    async contarDisciplinasExistentes(ids: number[]) {
+      return db.disciplina.count({ where: { id: { in: ids } } });
+    },
+
+    /**
+     * Serializa as alterações de pré-requisitos: duas secretarias editando ao mesmo tempo
+     * poderiam, cada uma, criar metade de um ciclo (A exige B / B exige A) sem enxergar a outra.
+     * Leituras continuam liberadas.
+     */
+    async travarPreRequisitos() {
+      await db.$executeRaw`LOCK TABLE pre_requisitos IN SHARE ROW EXCLUSIVE MODE`;
+    },
+
+    listarArestasPreRequisitos() {
+      return db.preRequisito.findMany({ select: { disciplinaId: true, preRequisitoId: true } });
+    },
+
+    async substituirPreRequisitos(disciplinaId: number, preRequisitoIds: number[]) {
+      await db.preRequisito.deleteMany({ where: { disciplinaId } });
+      if (preRequisitoIds.length > 0) {
+        await db.preRequisito.createMany({
+          data: preRequisitoIds.map((preRequisitoId) => ({ disciplinaId, preRequisitoId })),
+        });
+      }
     },
 
     criarDisciplina(dados: DisciplinaInput) {
-      return db.disciplina.create({ data: dados, select: disciplinaSelect });
+      return db.disciplina.create({ data: dados, select: disciplinaComPreRequisitos });
     },
 
     atualizarDisciplina(id: number, dados: DisciplinaInput) {
-      return db.disciplina.update({ where: { id }, data: dados, select: disciplinaSelect });
+      return db.disciplina.update({
+        where: { id },
+        data: dados,
+        select: disciplinaComPreRequisitos,
+      });
     },
 
     async listarProfessores({ q, skip, take }: Filtro) {
