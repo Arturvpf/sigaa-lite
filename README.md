@@ -520,7 +520,7 @@ apps/frontend/src/
 
 Ao trocar de página, a lista anterior continua na tela até a nova chegar (`keepPreviousData`), com um indicador "Atualizando…", em vez de piscar um carregamento.
 
-Verificado manualmente no navegador em **360×780**, nos temas claro e escuro: login, busca, matrícula, cancelamento com confirmação e progresso, **sem rolagem horizontal** em nenhuma das telas.
+Verificado manualmente no navegador em **360×780**: login, busca, matrícula, cancelamento com confirmação e progresso, **sem rolagem horizontal** em nenhuma das telas.
 
 ### Secretaria (desktop)
 
