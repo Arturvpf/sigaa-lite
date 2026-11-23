@@ -7,7 +7,7 @@ Sistema de matrícula de graduação com dois perfis de acesso — **Secretaria*
 
 **O que está entregue:** login por nome de usuário; fluxo completo do aluno (ofertas com classificação por curso, matrícula, cancelamento e progresso), funcionando em celular a partir de 360px; telas da secretaria (disciplinas, professores e turmas); as **13 regras de negócio** com testes automatizados; e o requisito à escolha, **pré-requisitos entre disciplinas**, do back-end ao front-end. São 166 testes no back-end (unitários e de integração com PostgreSQL) e 71 no front-end.
 
-**Atalhos:** [como rodar](#como-rodar-do-zero) · [roteiro para avaliar](#roteiro-rápido-para-avaliar) · [API](#api) · [requisito à escolha](#requisito-à-escolha-pré-requisitos-entre-disciplinas) · [decisões](#principais-decisões) · [rastreabilidade das regras](#rastreabilidade-das-regras-de-negócio) · [o que ficou de fora](#o-que-ficou-de-fora) · [com mais tempo](#o-que-eu-faria-com-mais-tempo)
+**Atalhos:** [como rodar](#como-rodar-do-zero) · [logins de teste](#como-entrar-logins-de-teste) · [telas](#telas) · [roteiro para avaliar](#roteiro-para-avaliar-passo-a-passo) · [API](#api) · [requisito à escolha](#requisito-à-escolha-pré-requisitos-entre-disciplinas) · [decisões](#principais-decisões) · [rastreabilidade das regras](#rastreabilidade-das-regras-de-negócio) · [o que ficou de fora](#o-que-ficou-de-fora) · [com mais tempo](#o-que-eu-faria-com-mais-tempo)
 
 ## Estrutura do repositório (monorepo)
 
@@ -52,7 +52,7 @@ npm run db:seed
 npm run dev
 ```
 
-Depois, abra **http://localhost:5173** e entre com um dos [usuários do seed](#usuários-do-seed) (ex.: `ana` ou `secretaria`). Para rodar os testes: `npm test` (com o banco no ar).
+Depois, abra **http://localhost:5173** e entre com um dos [logins de teste](#como-entrar-logins-de-teste) (ex.: `ana` ou `secretaria`). Para rodar os testes: `npm test` (com o banco no ar).
 
 > No PowerShell, use `Copy-Item` no lugar de `cp`.
 >
@@ -66,28 +66,32 @@ Este passo a passo foi validado clonando o repositório numa pasta limpa, com um
 - _"Não foi possível falar com o servidor" na tela de login_: a API não está no ar ou o front aponta para outro endereço (`VITE_API_URL` em `apps/frontend/.env`).
 - _Testes de integração falhando ao conectar_: o PostgreSQL precisa estar rodando (`docker compose up -d`); o banco de testes `sigaa_test` é criado pelo próprio compose.
 
-## Roteiro rápido para avaliar
+## Como entrar (logins de teste)
 
-| Entre como   | Veja                                                                                                                                                                                                                                                                                                                                       |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ana`        | **Progresso**: eletiva de perfil 100% e 45h excedentes contando como eletiva livre (regra 11). **Ofertas**: IF676 aparece como "Já aprovado"; IF678 tem uma única vaga. Matricule-se em IF673: a **confirmação** avisa que, como o perfil já está completo, as 60h vão contar como eletiva livre. Depois cancele em **Minhas matrículas**. |
-| `carla`      | As mesmas disciplinas com outra classificação (IF671 é eletiva de perfil para Engenharia, IF677 é livre). Tente IF676: **turma lotada**.                                                                                                                                                                                                   |
-| `bruno`      | **Pré-requisitos**: sem IF669 aprovada, IF671, IF672 e IF678 aparecem com "✗ IF669" e o botão "Pré-requisito pendente".                                                                                                                                                                                                                    |
-| `eduarda`    | Eletiva livre com 105h de 60h: o percentual para em 100% e "Falta" mostra "Concluído" (regra 13).                                                                                                                                                                                                                                          |
-| `secretaria` | Cadastre uma disciplina com CH 20 (recusada) e com código existente (recusada). Em **Turmas**, tente reduzir as vagas de IF676 para 1 (há 2 matriculados). Em **Disciplinas → Pré-requisitos**, tente fazer IF668 exigir IF671 (ciclo, recusado).                                                                                          |
+O login é feito **só pelo nome de usuário**. A senha é opcional no sistema e **nenhum usuário do seed tem senha**: deixe o campo em branco.
 
-## Usuários do seed
+<img src="docs/imagens/aluno-1-login.jpg" alt="Tela de login com os campos Nome de usuário e Senha (opcional)" width="220" align="right">
 
-O login é feito apenas pelo nome de usuário (a senha é opcional e os usuários do seed não têm senha).
+1. Abra **http://localhost:5173**.
+2. Em **Nome de usuário**, digite um dos logins da tabela (ex.: `ana`).
+3. Deixe **Senha** em branco e clique em **Entrar**.
+4. Você vai direto para a área do seu perfil: **Ofertas** (aluno) ou **Disciplinas** (secretaria).
+5. Para trocar de usuário, clique em **Sair**, no canto superior direito.
 
-| Usuário      | Perfil     | Curso                    | Cenário que exercita                                                                                                                                      |
-| ------------ | ---------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `secretaria` | Secretaria | —                        | Cadastros de disciplinas, professores e turmas                                                                                                            |
-| `ana`        | Aluno      | Ciência da Computação    | 165h de eletiva de perfil (exige 120h): **45h excedentes contam como livre**                                                                              |
-| `bruno`      | Aluno      | Ciência da Computação    | Recursa IF669 (reprovado); ocupa uma das 2 vagas da turma lotada de IF676; **sem IF669 aprovada, não pode cursar IF671, IF672 nem IF678 (pré-requisito)** |
-| `carla`      | Aluno      | Engenharia da Computação | Mesmas disciplinas da Ana com outra classificação (IF671 é perfil, IF677 é livre)                                                                         |
-| `diego`      | Aluno      | Engenharia da Computação | Calouro sem histórico (progresso zerado); **não pode cursar IF669 sem antes ser aprovado em IF668**                                                       |
-| `eduarda`    | Aluno      | Engenharia da Computação | Quase formada: obrigatórias e perfil completas, livre acima do exigido (limite de 100%)                                                                   |
+Um aluno que tenta abrir uma página da secretaria (ou o contrário) vê "Acesso negado". Se a sessão expirar (1 hora), o sistema volta para o login com um aviso.
+
+<br clear="right">
+
+| Login        | Senha   | Perfil     | Curso                    | O que esse usuário mostra                                                                                                                                 |
+| ------------ | ------- | ---------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `secretaria` | (vazia) | Secretaria | —                        | Cadastros de disciplinas, professores e turmas                                                                                                            |
+| `ana`        | (vazia) | Aluno      | Ciência da Computação    | 165h de eletiva de perfil (exige 120h): **45h excedentes contam como livre**                                                                              |
+| `bruno`      | (vazia) | Aluno      | Ciência da Computação    | Recursa IF669 (reprovado); ocupa uma das 2 vagas da turma lotada de IF676; **sem IF669 aprovada, não pode cursar IF671, IF672 nem IF678 (pré-requisito)** |
+| `carla`      | (vazia) | Aluno      | Engenharia da Computação | Mesmas disciplinas da Ana com outra classificação (IF671 é perfil, IF677 é livre)                                                                         |
+| `diego`      | (vazia) | Aluno      | Engenharia da Computação | Calouro sem histórico (progresso zerado); **não pode cursar IF669 sem antes ser aprovado em IF668**                                                       |
+| `eduarda`    | (vazia) | Aluno      | Engenharia da Computação | Quase formada: obrigatórias e perfil completas, livre acima do exigido (limite de 100%)                                                                   |
+
+> Para voltar os dados ao estado inicial depois de testar (ex.: desfazer matrículas feitas): `npm run db:seed`.
 
 ### Dados de exemplo
 
@@ -95,6 +99,63 @@ O login é feito apenas pelo nome de usuário (a senha é opcional e os usuário
 - **Disciplinas compartilhadas com classificação diferente:** IF671 e IF672 são obrigatórias em CC e eletivas de perfil em EC; IF673 é eletiva de perfil em CC e obrigatória em EC; IF677 e IF678 estão só em CC, e IF674 só em EC (eletiva livre para o outro curso).
 - **Fora das duas estruturas (sempre eletiva livre):** CT001, LE500 e HU100.
 - **Turmas:** 12 turmas no semestre; **IF676 está lotada** (2/2) e **IF678 tem uma única vaga** (2/3).
+
+## Telas
+
+Capturas do sistema rodando com os dados do seed. As telas do aluno são mostradas em celular (360px de largura, o mínimo exigido); as da secretaria, em desktop.
+
+### Aluno
+
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/imagens/aluno-2-ofertas.jpg" alt="Ofertas do semestre: cada turma com classificação, pré-requisitos, barra de ocupação e vagas" width="240"><br><b>Ofertas</b><br><sub>Classificação para o curso do aluno, pré-requisitos, ocupação e vagas. Busca e página ficam na URL.</sub></td>
+    <td align="center" width="33%"><img src="docs/imagens/aluno-3-confirmar-matricula.jpg" alt="Confirmação de matrícula com resumo da turma e o bloco Como conta no seu progresso" width="240"><br><b>Confirmar matrícula</b><br><sub>Resumo da turma e como a CH vai contar no progresso (aqui, perfil completo → conta como eletiva livre).</sub></td>
+    <td align="center" width="33%"><img src="docs/imagens/aluno-6-pre-requisito-pendente.jpg" alt="Ofertas do aluno bruno com o pré-requisito IF669 pendente e o botão bloqueado" width="240"><br><b>Pré-requisito pendente</b><br><sub>Login <code>bruno</code>: sem IF669 aprovada, o botão fica bloqueado (requisito à escolha).</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/imagens/aluno-4-minhas-matriculas.jpg" alt="Minhas matrículas: lista das matrículas ativas com o botão Cancelar matrícula" width="240"><br><b>Minhas matrículas</b><br><sub>Só as matrículas ativas do próprio aluno; cancelar pede confirmação e devolve a vaga.</sub></td>
+    <td align="center"><img src="docs/imagens/aluno-5-progresso.jpg" alt="Progresso no curso com resumo e barras por grupo" width="240"><br><b>Progresso</b><br><sub>CH exigida, integralizada, em curso (listrada) e o que falta, por grupo.</sub></td>
+    <td align="center"><img src="docs/imagens/aluno-1-login.jpg" alt="Tela de login" width="240"><br><b>Login</b><br><sub>Só o nome de usuário; a senha é opcional.</sub></td>
+  </tr>
+</table>
+
+### Secretaria
+
+<p align="center">
+  <img src="docs/imagens/secretaria-1-turmas.jpg" alt="Tabela de turmas com a ocupação de cada turma e a etiqueta Lotada" width="720"><br>
+  <b>Turmas</b> — ocupação de cada turma (ocupadas / total), com a turma lotada destacada.
+</p>
+
+<table>
+  <tr>
+    <td align="center" width="50%"><img src="docs/imagens/secretaria-2-vagas-abaixo-dos-matriculados.jpg" alt="Janela de alterar vagas recusando 1 vaga numa turma com 2 matriculados" width="400"><br><b>Regra 5</b><br><sub>Tentar deixar a IF676 com 1 vaga, tendo 2 matriculados, é recusado com a explicação no próprio campo.</sub></td>
+    <td align="center" width="50%"><img src="docs/imagens/secretaria-3-pre-requisitos.jpg" alt="Janela de pré-requisitos da IF671 com a IF669 marcada" width="400"><br><b>Pré-requisitos</b><br><sub>A secretaria marca o que precisa estar aprovado antes; ciclos são recusados.</sub></td>
+  </tr>
+</table>
+
+## Roteiro para avaliar (passo a passo)
+
+Com o sistema rodando e os dados do seed, este roteiro passa por todas as regras em poucos minutos.
+
+**Como aluno**
+
+1. Entre como **`ana`**. Na aba **Ofertas**, busque `IF67`: cada turma mostra a classificação **para Ciência da Computação**, os pré-requisitos (✓ aprovado) e a ocupação. IF671 e IF678 já aparecem como "Matriculado".
+2. Clique em **Matricular** na **IF673**. Abre a **confirmação**: como a Ana já completou as 120h de eletiva de perfil, ela avisa que estas 60h vão contar como **eletiva livre** (regra 11). Confirme.
+3. Abra **Minhas matrículas**: a IF673 aparece na lista. Clique em **Cancelar matrícula**, confirme, e veja a vaga voltar nas ofertas (regra 8).
+4. Abra **Progresso**: eletiva de perfil em 100% e as 45h excedentes contando em eletiva livre; a CH das matrículas aparece separada, como "em curso" (regras 11 e 12).
+5. Clique em **Sair** e entre como **`carla`** (Engenharia): as **mesmas disciplinas** aparecem com outra classificação — IF671 é eletiva de perfil, IF677 é livre (regra 10). Tente a **IF676**: **turma lotada** (regra 6).
+6. Entre como **`bruno`**: IF671, IF672 e IF678 mostram **✗ IF669** e o botão "Pré-requisito pendente" (requisito à escolha). Tente a **IF668**: ele já foi aprovado, então ela aparece como "Já aprovado" (regra 7).
+7. Entre como **`eduarda`**: em **Progresso**, eletiva livre tem 105h de 60h, mas o percentual para em **100%** e "Falta" mostra "Concluído" (regra 13).
+
+**Como secretaria**
+
+1. Entre como **`secretaria`**. Em **Disciplinas**, clique em **Nova disciplina** e tente **CH 20** (recusada: precisa ser múltipla de 15 entre 15 e 120) e depois o código **IF668** (recusado: já existe) — regras 1 e 2.
+2. Em **Professores**, tente cadastrar o e-mail `maria.souza@exemplo.edu.br` (recusado: já existe) — regra 3.
+3. Em **Turmas**, clique em **Abrir turma**: é preciso escolher disciplina e professor e ter pelo menos 1 vaga (regra 4). Depois, em **Alterar vagas** da **IF676**, tente **1** vaga: recusado, porque há 2 matriculados (regra 5).
+4. Em **Disciplinas → Pré-requisitos** da **IF668**, marque a **IF671** e salve: recusado, porque criaria um ciclo (IF671 → IF669 → IF668).
+5. Saia e tente abrir `http://localhost:5173/aluno/ofertas` sem login: o sistema leva para o login. Entre como aluno e abra `http://localhost:5173/secretaria/turmas`: "Acesso negado".
+
+> Ao terminar, `npm run db:seed` volta os dados ao estado inicial.
 
 ## Modelo de dados
 
