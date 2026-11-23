@@ -7,7 +7,7 @@
     "apps/frontend"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12"
   },
   "scripts": {
     "dev": "concurrently -n backend,frontend -c blue,magenta \"npm run dev -w apps/backend\" \"npm run dev -w apps/frontend\"",

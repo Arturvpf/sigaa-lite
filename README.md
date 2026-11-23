@@ -26,7 +26,7 @@ Os dois apps são **npm workspaces**: um único `npm install` na raiz instala tu
 
 ## Pré-requisitos
 
-- [Node.js](https://nodejs.org/) 20 ou superior (npm incluso)
+- [Node.js](https://nodejs.org/) 22.12 ou superior (npm incluso) — testado com Node 22 e 24
 - [Docker](https://www.docker.com/) com Docker Compose (para o PostgreSQL)
 
 ## Como rodar do zero
