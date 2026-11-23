@@ -81,9 +81,9 @@ export function TurmasPage() {
                       type="button"
                       className="botao botao--discreto"
                       onClick={() => setAlterando(turma)}
+                      aria-label={`Alterar vagas de ${turma.disciplina.codigo}`}
                     >
                       Alterar vagas
-                      <span className="visualmente-oculto"> de {turma.disciplina.codigo}</span>
                     </button>
                   </td>
                 </tr>

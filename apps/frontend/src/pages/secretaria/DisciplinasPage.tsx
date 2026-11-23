@@ -72,8 +72,9 @@ export function DisciplinasPage() {
                       type="button"
                       className="botao botao--discreto"
                       onClick={() => setFormulario(disciplina)}
+                      aria-label={`Editar ${disciplina.codigo}`}
                     >
-                      Editar<span className="visualmente-oculto"> {disciplina.codigo}</span>
+                      Editar
                     </button>
                   </td>
                 </tr>

@@ -67,15 +67,17 @@ function AcaoOferta({ oferta, onMatricular, matriculando, bloqueado }: OfertaCar
   if (oferta.jaAprovado) {
     return <span className="situacao">Já aprovado</span>;
   }
+  const texto = matriculando ? 'Matriculando…' : oferta.lotada ? 'Sem vagas' : 'Matricular';
   return (
     <button
       type="button"
       className="botao botao--primario"
       onClick={() => onMatricular(oferta.id)}
       disabled={oferta.lotada || bloqueado}
+      // O nome acessível começa com o texto visível (que muda com o estado) e diz a disciplina
+      aria-label={`${texto} em ${oferta.disciplina.codigo}`}
     >
-      {matriculando ? 'Matriculando…' : oferta.lotada ? 'Sem vagas' : 'Matricular'}
-      <span className="visualmente-oculto"> em {oferta.disciplina.codigo}</span>
+      {texto}
     </button>
   );
 }
