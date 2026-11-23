@@ -23,6 +23,7 @@ function oferta(parcial: Partial<Oferta> & { id: number; codigo: string }): Ofer
     classificacao: 'OBRIGATORIA',
     matriculaId: null,
     jaAprovado: false,
+    preRequisitos: [],
     ...resto,
   };
 }

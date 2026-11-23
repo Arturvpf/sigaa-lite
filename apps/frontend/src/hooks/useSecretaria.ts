@@ -64,6 +64,22 @@ export const useSalvarDisciplina = () =>
     [chavesSecretaria.disciplinas, chavesSecretaria.turmas],
   );
 
+export const useDefinirPreRequisitos = () =>
+  useMutacaoSecretaria(
+    ({ id, preRequisitoIds }: { id: number; preRequisitoIds: number[] }) =>
+      secretariaApi.definirPreRequisitos(id, preRequisitoIds),
+    // As ofertas do aluno também mostram pré-requisitos
+    [chavesSecretaria.disciplinas, ['aluno']],
+  );
+
+/** Todas as disciplinas (até 50), para escolher pré-requisitos. */
+export function useTodasDisciplinas() {
+  return useQuery({
+    queryKey: [...chavesSecretaria.disciplinas, 'opcoes'],
+    queryFn: ({ signal }) => secretariaApi.listarDisciplinas('', 1, TAMANHO_MAXIMO, signal),
+  });
+}
+
 export const useCriarProfessor = () =>
   useMutacaoSecretaria(secretariaApi.criarProfessor, [chavesSecretaria.professores]);
 

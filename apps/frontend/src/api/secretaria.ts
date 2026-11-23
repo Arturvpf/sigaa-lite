@@ -1,7 +1,10 @@
 import type { DisciplinaResumo, Pagina } from './aluno';
 import { api } from './client';
 
-export type Disciplina = DisciplinaResumo;
+export interface Disciplina extends DisciplinaResumo {
+  /** Disciplinas que precisam estar aprovadas antes desta (requisito à escolha). */
+  preRequisitos: { id: number; codigo: string; nome: string }[];
+}
 
 export interface Professor {
   id: number;
@@ -57,6 +60,11 @@ export const secretariaApi = {
     api<Disciplina>('/secretaria/disciplinas', { method: 'POST', body: dados }),
   atualizarDisciplina: (id: number, dados: DisciplinaForm) =>
     api<Disciplina>(`/secretaria/disciplinas/${id}`, { method: 'PUT', body: dados }),
+  definirPreRequisitos: (id: number, preRequisitoIds: number[]) =>
+    api<Disciplina>(`/secretaria/disciplinas/${id}/pre-requisitos`, {
+      method: 'PUT',
+      body: { preRequisitoIds },
+    }),
 
   listarProfessores: listar<Professor>('/secretaria/professores'),
   criarProfessor: (dados: ProfessorForm) =>

@@ -20,6 +20,8 @@ export interface Oferta {
   classificacao: Classificacao;
   matriculaId: number | null;
   jaAprovado: boolean;
+  /** Pré-requisitos da disciplina e se o aluno já os tem aprovados. */
+  preRequisitos: { id: number; codigo: string; nome: string; atendido: boolean }[];
 }
 
 export interface Pagina<T> {
