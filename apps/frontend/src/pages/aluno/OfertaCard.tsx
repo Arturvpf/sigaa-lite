@@ -1,5 +1,7 @@
 import type { Oferta } from '../../api/aluno';
+import { BarraOcupacao } from '../../components/BarraOcupacao';
 import { EtiquetaClassificacao } from '../../components/EtiquetaClassificacao';
+import { Icone } from '../../components/Icone';
 
 interface OfertaCardProps {
   oferta: Oferta;
@@ -30,6 +32,12 @@ export function OfertaCard({ oferta, onMatricular, matriculando, bloqueado }: Of
 
       {oferta.preRequisitos.length > 0 && <PreRequisitos oferta={oferta} />}
 
+      <BarraOcupacao
+        ocupadas={oferta.vagasOcupadas}
+        vagas={oferta.vagas}
+        disponiveis={oferta.vagasDisponiveis}
+      />
+
       <div className="item-lista__rodape">
         <Vagas oferta={oferta} />
         <AcaoOferta
@@ -55,7 +63,7 @@ function PreRequisitos({ oferta }: { oferta: Oferta }) {
             className={`pre-requisito ${p.atendido ? 'pre-requisito--ok' : 'pre-requisito--pendente'}`}
             title={p.nome}
           >
-            <span aria-hidden="true">{p.atendido ? '✓' : '✗'}</span> {p.codigo}
+            <Icone nome={p.atendido ? 'check' : 'x'} tamanho={12} /> {p.codigo}
             <span className="visualmente-oculto">{p.atendido ? ' (aprovado)' : ' (pendente)'}</span>
           </li>
         ))}
@@ -85,7 +93,12 @@ function Vagas({ oferta }: { oferta: Oferta }) {
  */
 function AcaoOferta({ oferta, onMatricular, matriculando, bloqueado }: OfertaCardProps) {
   if (oferta.matriculaId !== null) {
-    return <span className="situacao situacao--matriculado">✓ Matriculado</span>;
+    return (
+      <span className="situacao situacao--matriculado">
+        <Icone nome="check" tamanho={16} />
+        Matriculado
+      </span>
+    );
   }
   if (oferta.jaAprovado) {
     return <span className="situacao">Já aprovado</span>;
