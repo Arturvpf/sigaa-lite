@@ -7,7 +7,7 @@ Sistema de matrícula de graduação com dois perfis de acesso — **Secretaria*
 
 **O que está entregue:** login por nome de usuário; fluxo completo do aluno (ofertas com classificação por curso, matrícula, cancelamento e progresso), funcionando em celular a partir de 360px; telas da secretaria (disciplinas, professores e turmas); as **13 regras de negócio** com testes automatizados; e o requisito à escolha, **pré-requisitos entre disciplinas**, do back-end ao front-end. São 166 testes no back-end (unitários e de integração com PostgreSQL) e 71 no front-end.
 
-**Atalhos:** [como rodar](#como-rodar-do-zero) · [logins de teste](#como-entrar-logins-de-teste) · [telas](#telas) · [roteiro para avaliar](#roteiro-para-avaliar-passo-a-passo) · [API](#api) · [requisito à escolha](#requisito-à-escolha-pré-requisitos-entre-disciplinas) · [decisões](#principais-decisões) · [rastreabilidade das regras](#rastreabilidade-das-regras-de-negócio) · [o que ficou de fora](#o-que-ficou-de-fora) · [com mais tempo](#o-que-eu-faria-com-mais-tempo)
+**Atalhos:** [como rodar](#como-rodar-do-zero) · [logins de teste](#como-entrar-logins-de-teste) · [telas](#telas) · [roteiro de demonstração](#roteiro-de-demonstração-passo-a-passo) · [API](#api) · [requisito à escolha](#requisito-à-escolha-pré-requisitos-entre-disciplinas) · [decisões](#principais-decisões) · [rastreabilidade das regras](#rastreabilidade-das-regras-de-negócio) · [o que ficou de fora](#o-que-ficou-de-fora) · [com mais tempo](#o-que-eu-faria-com-mais-tempo)
 
 ## Estrutura do repositório (monorepo)
 
@@ -133,7 +133,7 @@ Capturas do sistema rodando com os dados do seed. As telas do aluno são mostrad
   </tr>
 </table>
 
-## Roteiro para avaliar (passo a passo)
+## Roteiro de demonstração (passo a passo)
 
 Com o sistema rodando e os dados do seed, este roteiro passa por todas as regras em poucos minutos.
 
