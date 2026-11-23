@@ -22,6 +22,8 @@ export function createAlunoRepositoryFake() {
       disciplinaId: number;
       situacao: 'APROVADO' | 'REPROVADO';
     }[],
+    /** disciplinaId exige preRequisitoId */
+    preRequisitos: [] as { disciplinaId: number; preRequisitoId: number }[],
     matriculas: [] as {
       id: number;
       alunoId: number;
@@ -58,6 +60,15 @@ export function createAlunoRepositoryFake() {
     async listarTurmas({ skip, take }: { q?: string; skip: number; take: number }) {
       const turmas = dados.turmas.slice(skip, skip + take).map((t) => ({
         ...turmaDetalhada(t.id),
+        disciplina: {
+          ...disciplina(t.disciplinaId),
+          preRequisitos: dados.preRequisitos
+            .filter((p) => p.disciplinaId === t.disciplinaId)
+            .map((p) => {
+              const { id, codigo, nome } = disciplina(p.preRequisitoId);
+              return { preRequisito: { id, codigo, nome } };
+            }),
+        },
         vagas: t.vagas,
         _count: { matriculas: ativas((m) => m.turmaId === t.id).length },
       }));
@@ -92,6 +103,24 @@ export function createAlunoRepositoryFake() {
         (h) =>
           h.alunoId === alunoId && h.disciplinaId === disciplinaId && h.situacao === 'APROVADO',
       );
+    },
+
+    async listarPreRequisitosPendentes(alunoId: number, disciplinaId: number) {
+      return dados.preRequisitos
+        .filter((p) => p.disciplinaId === disciplinaId)
+        .filter(
+          (p) =>
+            !dados.historico.some(
+              (h) =>
+                h.alunoId === alunoId &&
+                h.disciplinaId === p.preRequisitoId &&
+                h.situacao === 'APROVADO',
+            ),
+        )
+        .map((p) => {
+          const { id, codigo, nome } = disciplina(p.preRequisitoId);
+          return { id, codigo, nome };
+        });
     },
 
     async buscarMatriculaAtivaNaDisciplina(alunoId: number, disciplinaId: number) {
