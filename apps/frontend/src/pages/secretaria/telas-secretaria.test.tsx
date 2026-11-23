@@ -186,7 +186,8 @@ describe('Turmas', () => {
     const [, bd, intro] = await screen.findAllByRole('row');
     expect(within(bd!).getByText('2 / 3')).toBeInTheDocument();
     expect(within(intro!).getByText('2 / 2')).toBeInTheDocument();
-    expect(within(intro!).getByText('lotada')).toBeInTheDocument();
+    expect(within(intro!).getByText('Lotada')).toBeInTheDocument();
+    expect(within(bd!).queryByText('Lotada')).not.toBeInTheDocument();
   });
 
   it('não deixa reduzir as vagas abaixo dos matriculados (regra 5)', async () => {

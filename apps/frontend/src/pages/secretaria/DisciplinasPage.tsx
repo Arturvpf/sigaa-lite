@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { mensagemDeErro } from '../../api/errors';
 import type { Disciplina } from '../../api/secretaria';
 import { Campo } from '../../components/Campo';
+import { Icone } from '../../components/Icone';
 import { CampoBusca } from '../../components/CampoBusca';
 import { ConteudoLista } from '../../components/ConteudoLista';
 import { JanelaFormulario } from '../../components/JanelaFormulario';
@@ -29,6 +30,7 @@ export function DisciplinasPage() {
           className="botao botao--primario"
           onClick={() => setFormulario('nova')}
         >
+          <Icone nome="mais" />
           Nova disciplina
         </button>
       </div>
@@ -50,57 +52,59 @@ export function DisciplinasPage() {
         mensagemVazia="Nenhuma disciplina cadastrada."
       >
         {(items) => (
-          <table className="tabela">
-            <thead>
-              <tr>
-                <th scope="col">Código</th>
-                <th scope="col">Nome</th>
-                <th scope="col" className="tabela__numero">
-                  CH
-                </th>
-                <th scope="col">Pré-requisitos</th>
-                <th scope="col" className="tabela__acoes">
-                  <span className="visualmente-oculto">Ações</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((disciplina) => (
-                <tr key={disciplina.id}>
-                  <td className="codigo">{disciplina.codigo}</td>
-                  <td>{disciplina.nome}</td>
-                  <td className="tabela__numero">{disciplina.ch}h</td>
-                  <td>
-                    {disciplina.preRequisitos.length > 0 ? (
-                      <span className="codigo">
-                        {disciplina.preRequisitos.map((p) => p.codigo).join(', ')}
-                      </span>
-                    ) : (
-                      <span className="texto-suave">—</span>
-                    )}
-                  </td>
-                  <td className="tabela__acoes">
-                    <button
-                      type="button"
-                      className="botao botao--discreto"
-                      onClick={() => setPreRequisitosDe(disciplina)}
-                      aria-label={`Pré-requisitos de ${disciplina.codigo}`}
-                    >
-                      Pré-requisitos
-                    </button>{' '}
-                    <button
-                      type="button"
-                      className="botao botao--discreto"
-                      onClick={() => setFormulario(disciplina)}
-                      aria-label={`Editar ${disciplina.codigo}`}
-                    >
-                      Editar
-                    </button>
-                  </td>
+          <div className="tabela-caixa">
+            <table className="tabela">
+              <thead>
+                <tr>
+                  <th scope="col">Código</th>
+                  <th scope="col">Nome</th>
+                  <th scope="col" className="tabela__numero">
+                    CH
+                  </th>
+                  <th scope="col">Pré-requisitos</th>
+                  <th scope="col" className="tabela__acoes">
+                    <span className="visualmente-oculto">Ações</span>
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {items.map((disciplina) => (
+                  <tr key={disciplina.id}>
+                    <td className="codigo">{disciplina.codigo}</td>
+                    <td>{disciplina.nome}</td>
+                    <td className="tabela__numero">{disciplina.ch}h</td>
+                    <td>
+                      {disciplina.preRequisitos.length > 0 ? (
+                        <span className="codigo">
+                          {disciplina.preRequisitos.map((p) => p.codigo).join(', ')}
+                        </span>
+                      ) : (
+                        <span className="texto-suave">—</span>
+                      )}
+                    </td>
+                    <td className="tabela__acoes">
+                      <button
+                        type="button"
+                        className="botao botao--discreto"
+                        onClick={() => setPreRequisitosDe(disciplina)}
+                        aria-label={`Pré-requisitos de ${disciplina.codigo}`}
+                      >
+                        Pré-requisitos
+                      </button>{' '}
+                      <button
+                        type="button"
+                        className="botao botao--discreto"
+                        onClick={() => setFormulario(disciplina)}
+                        aria-label={`Editar ${disciplina.codigo}`}
+                      >
+                        Editar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </ConteudoLista>
 

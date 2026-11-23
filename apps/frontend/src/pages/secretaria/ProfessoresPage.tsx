@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { mensagemDeErro } from '../../api/errors';
 import { Campo } from '../../components/Campo';
+import { Icone } from '../../components/Icone';
 import { CampoBusca } from '../../components/CampoBusca';
 import { ConteudoLista } from '../../components/ConteudoLista';
 import { JanelaFormulario } from '../../components/JanelaFormulario';
@@ -23,6 +24,7 @@ export function ProfessoresPage() {
           className="botao botao--primario"
           onClick={() => setCadastrando(true)}
         >
+          <Icone nome="mais" />
           Novo professor
         </button>
       </div>
@@ -44,22 +46,24 @@ export function ProfessoresPage() {
         mensagemVazia="Nenhum professor cadastrado."
       >
         {(items) => (
-          <table className="tabela">
-            <thead>
-              <tr>
-                <th scope="col">Nome</th>
-                <th scope="col">E-mail</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((professor) => (
-                <tr key={professor.id}>
-                  <td>{professor.nome}</td>
-                  <td>{professor.email}</td>
+          <div className="tabela-caixa">
+            <table className="tabela">
+              <thead>
+                <tr>
+                  <th scope="col">Nome</th>
+                  <th scope="col">E-mail</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {items.map((professor) => (
+                  <tr key={professor.id}>
+                    <td>{professor.nome}</td>
+                    <td>{professor.email}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </ConteudoLista>
 

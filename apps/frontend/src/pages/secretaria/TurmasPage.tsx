@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { mensagemDeErro } from '../../api/errors';
 import type { Turma } from '../../api/secretaria';
+import { BarraOcupacao } from '../../components/BarraOcupacao';
 import { Campo } from '../../components/Campo';
+import { Icone } from '../../components/Icone';
 import { CampoBusca } from '../../components/CampoBusca';
 import { ConteudoLista } from '../../components/ConteudoLista';
 import { JanelaFormulario } from '../../components/JanelaFormulario';
@@ -26,6 +28,7 @@ export function TurmasPage() {
       <div className="cabecalho-pagina">
         <h1>Turmas</h1>
         <button type="button" className="botao botao--primario" onClick={() => setAbrindo(true)}>
+          <Icone nome="mais" />
           Abrir turma
         </button>
       </div>
@@ -47,49 +50,58 @@ export function TurmasPage() {
         mensagemVazia="Nenhuma turma aberta neste semestre."
       >
         {(items) => (
-          <table className="tabela">
-            <thead>
-              <tr>
-                <th scope="col">Disciplina</th>
-                <th scope="col">Professor</th>
-                <th scope="col" className="tabela__numero">
-                  Ocupadas / total
-                </th>
-                <th scope="col" className="tabela__acoes">
-                  <span className="visualmente-oculto">Ações</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((turma) => (
-                <tr key={turma.id}>
-                  <td>
-                    <span className="codigo">{turma.disciplina.codigo}</span>{' '}
-                    {turma.disciplina.nome}
-                  </td>
-                  <td>{turma.professor.nome}</td>
-                  <td className="tabela__numero">
-                    <span className={turma.vagasDisponiveis === 0 ? 'vagas--lotada' : undefined}>
-                      {turma.vagasOcupadas} / {turma.vagas}
-                    </span>
-                    {turma.vagasDisponiveis === 0 && (
-                      <span className="etiqueta-lotada">lotada</span>
-                    )}
-                  </td>
-                  <td className="tabela__acoes">
-                    <button
-                      type="button"
-                      className="botao botao--discreto"
-                      onClick={() => setAlterando(turma)}
-                      aria-label={`Alterar vagas de ${turma.disciplina.codigo}`}
-                    >
-                      Alterar vagas
-                    </button>
-                  </td>
+          <div className="tabela-caixa">
+            <table className="tabela">
+              <thead>
+                <tr>
+                  <th scope="col">Disciplina</th>
+                  <th scope="col">Professor</th>
+                  <th scope="col" className="tabela__ocupacao">
+                    Ocupação (ocupadas / total)
+                  </th>
+                  <th scope="col" className="tabela__acoes">
+                    <span className="visualmente-oculto">Ações</span>
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {items.map((turma) => (
+                  <tr key={turma.id}>
+                    <td>
+                      <span className="codigo">{turma.disciplina.codigo}</span>{' '}
+                      {turma.disciplina.nome}
+                    </td>
+                    <td>{turma.professor.nome}</td>
+                    <td className="tabela__ocupacao">
+                      <div className="ocupacao-linha">
+                        <BarraOcupacao
+                          ocupadas={turma.vagasOcupadas}
+                          vagas={turma.vagas}
+                          disponiveis={turma.vagasDisponiveis}
+                        />
+                        <span className="ocupacao-linha__numeros">
+                          {turma.vagasOcupadas} / {turma.vagas}
+                        </span>
+                        {turma.vagasDisponiveis === 0 && (
+                          <span className="etiqueta-lotada">Lotada</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="tabela__acoes">
+                      <button
+                        type="button"
+                        className="botao botao--discreto"
+                        onClick={() => setAlterando(turma)}
+                        aria-label={`Alterar vagas de ${turma.disciplina.codigo}`}
+                      >
+                        Alterar vagas
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </ConteudoLista>
 

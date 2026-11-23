@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import type { Oferta } from '../../api/aluno';
 import { CampoBusca } from '../../components/CampoBusca';
 import {
   Carregando,
@@ -8,12 +10,15 @@ import {
 import { Paginacao } from '../../components/Paginacao';
 import { useMatricular, useOfertas } from '../../hooks/useAluno';
 import { useParametrosLista } from '../../hooks/useParametrosLista';
+import { ConfirmarMatricula } from './ConfirmarMatricula';
 import { OfertaCard } from './OfertaCard';
 
 export function OfertasPage() {
   const { busca, pagina, setBusca, setPagina } = useParametrosLista();
   const ofertas = useOfertas(busca, pagina);
   const matricular = useMatricular();
+  // A matrícula só acontece depois da confirmação
+  const [aConfirmar, setAConfirmar] = useState<Oferta | null>(null);
 
   return (
     <section>
@@ -60,7 +65,7 @@ export function OfertasPage() {
               <OfertaCard
                 key={oferta.id}
                 oferta={oferta}
-                onMatricular={(turmaId) => matricular.mutate(turmaId)}
+                onMatricular={() => setAConfirmar(oferta)}
                 matriculando={matricular.isPending && matricular.variables === oferta.id}
                 bloqueado={matricular.isPending}
               />
@@ -73,6 +78,17 @@ export function OfertasPage() {
             onMudar={setPagina}
           />
         </>
+      )}
+
+      {aConfirmar && (
+        <ConfirmarMatricula
+          oferta={aConfirmar}
+          confirmando={matricular.isPending}
+          onConfirmar={() =>
+            matricular.mutate(aConfirmar.id, { onSettled: () => setAConfirmar(null) })
+          }
+          onVoltar={() => setAConfirmar(null)}
+        />
       )}
     </section>
   );

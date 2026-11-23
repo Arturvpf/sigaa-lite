@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Icone } from './Icone';
 
 interface CampoBuscaProps {
   /** Valor atual da busca (vindo da URL). */
@@ -38,6 +39,7 @@ export function CampoBusca({
   return (
     <label className="campo campo--busca">
       <span className="visualmente-oculto">{rotulo}</span>
+      <Icone nome="busca" />
       <input
         type="search"
         value={texto}

@@ -4,6 +4,7 @@ import { Navigate, useLocation } from 'react-router';
 import { mensagemDeErro } from '../api/errors';
 import { useAuth } from '../auth/auth-context';
 import { areaDoPerfil, type Perfil } from '../auth/session';
+import { Icone } from '../components/Icone';
 
 /** Prefixo de rota de cada perfil: só volta para a página pedida se ela for da área certa. */
 const prefixoDoPerfil: Record<Perfil, string> = { ALUNO: '/aluno', SECRETARIA: '/secretaria' };
@@ -36,56 +37,64 @@ export function LoginPage() {
 
   return (
     <main className="pagina-centralizada">
-      <form className="cartao formulario-login" onSubmit={enviar} noValidate>
-        <h1>SIGAA Lite</h1>
-        <p className="texto-suave">Sistema de matrícula</p>
+      <div className="login">
+        <div className="login__marca">
+          <span className="marca__icone">
+            <Icone nome="marca" tamanho={26} />
+          </span>
+          <h1>SIGAA Lite</h1>
+          <p>Matrícula do semestre, sem fila e sem papel.</p>
+        </div>
 
         {sessaoExpirada && (
           <p className="aviso aviso--info" role="status">
-            Sua sessão expirou. Entre novamente para continuar.
+            <Icone nome="info" />
+            <span>Sua sessão expirou. Entre novamente para continuar.</span>
           </p>
         )}
 
-        <label className="campo">
-          <span>Nome de usuário</span>
-          <input
-            name="username"
-            autoComplete="username"
-            autoCapitalize="none"
-            autoFocus
-            required
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-        </label>
+        <form className="cartao formulario-login" onSubmit={enviar} noValidate>
+          <label className="campo">
+            <span>Nome de usuário</span>
+            <input
+              name="username"
+              autoComplete="username"
+              autoCapitalize="none"
+              autoFocus
+              required
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </label>
 
-        <label className="campo">
-          <span>
-            Senha <span className="texto-suave">(opcional)</span>
-          </span>
-          <input
-            name="senha"
-            type="password"
-            autoComplete="current-password"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-          />
-        </label>
+          <label className="campo">
+            <span>
+              Senha <span className="texto-suave">(opcional)</span>
+            </span>
+            <input
+              name="senha"
+              type="password"
+              autoComplete="current-password"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+            />
+          </label>
 
-        {login.isError && (
-          <p className="aviso aviso--erro" role="alert">
-            {mensagemDeErro(login.error)}
-          </p>
-        )}
+          {login.isError && (
+            <p className="aviso aviso--erro" role="alert">
+              {mensagemDeErro(login.error)}
+            </p>
+          )}
 
-        <button
-          className="botao botao--primario"
-          type="submit"
-          disabled={!username.trim() || login.isPending}
-        >
-          {login.isPending ? 'Entrando…' : 'Entrar'}
-        </button>
-      </form>
+          <button
+            className="botao botao--primario botao--grande"
+            type="submit"
+            disabled={!username.trim() || login.isPending}
+          >
+            {login.isPending ? 'Entrando…' : 'Entrar'}
+          </button>
+        </form>
+      </div>
     </main>
   );
 }
