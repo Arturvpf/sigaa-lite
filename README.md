@@ -178,6 +178,24 @@ Cada **grupo** do progresso traz:
 }
 ```
 
+### Secretaria
+
+Todas exigem token de um usuário com perfil `SECRETARIA` (401 sem token, 403 com outro perfil). Listagens aceitam `?q=&page=&pageSize=`.
+
+| Método | Rota                           | Entrada                                | Resposta                                                                                | Erros                                                                                              |
+| ------ | ------------------------------ | -------------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| GET    | `/secretaria/disciplinas`      | busca por código ou nome               | `200` página de `{ id, codigo, nome, ch }`                                              | —                                                                                                  |
+| POST   | `/secretaria/disciplinas`      | `{ codigo, nome, ch }`                 | `201 { id, codigo, nome, ch }`                                                          | 400 `VALIDACAO` (CH inválida etc.), 409 `CODIGO_DUPLICADO`                                         |
+| GET    | `/secretaria/disciplinas/:id`  | —                                      | `200 { id, codigo, nome, ch }`                                                          | 404 `DISCIPLINA_NAO_ENCONTRADA`                                                                    |
+| PUT    | `/secretaria/disciplinas/:id`  | `{ codigo, nome, ch }`                 | `200 { id, codigo, nome, ch }`                                                          | 400, 404, 409 `CODIGO_DUPLICADO`                                                                   |
+| GET    | `/secretaria/professores`      | busca por nome ou e-mail               | `200` página de `{ id, nome, email }`                                                   | —                                                                                                  |
+| POST   | `/secretaria/professores`      | `{ nome, email }`                      | `201 { id, nome, email }`                                                               | 400 (e-mail inválido), 409 `EMAIL_DUPLICADO`                                                       |
+| GET    | `/secretaria/turmas`           | busca por disciplina ou professor      | `200` página de `{ id, disciplina, professor, vagas, vagasOcupadas, vagasDisponiveis }` | —                                                                                                  |
+| POST   | `/secretaria/turmas`           | `{ disciplinaId, professorId, vagas }` | `201 { id }`                                                                            | 400 (vagas < 1, campo faltando), 422 `DISCIPLINA_INEXISTENTE` / `PROFESSOR_INEXISTENTE`            |
+| PATCH  | `/secretaria/turmas/:id/vagas` | `{ vagas }`                            | `200 { id, vagas, vagasOcupadas }`                                                      | 400, 404 `TURMA_NAO_ENCONTRADA`, 422 `VAGAS_ABAIXO_DOS_MATRICULADOS` (`details: { matriculados }`) |
+
+O código da disciplina é normalizado (sem espaços, em maiúsculas: `if 668` → `IF668`) e o e-mail do professor em minúsculas, então a unicidade não depende de maiúsculas.
+
 ### Formato de erro
 
 Todos os erros têm o mesmo formato. O `code` é estável e pode ser usado pelo front-end; a `message` é legível para o usuário; `details` aparece só quando ajuda (ex.: campos inválidos).
@@ -190,15 +208,15 @@ Todos os erros têm o mesmo formato. O `code` é estável e pode ser usado pelo 
 }
 ```
 
-| Status | Quando                                                    | Exemplos de `code`                                         |
-| ------ | --------------------------------------------------------- | ---------------------------------------------------------- |
-| 400    | Entrada mal formada (tipo, formato, campo faltando, JSON) | `VALIDACAO`, `JSON_INVALIDO`                               |
-| 401    | Não autenticado                                           | `TOKEN_AUSENTE`, `TOKEN_EXPIRADO`, `CREDENCIAIS_INVALIDAS` |
-| 403    | Autenticado, mas com perfil sem acesso                    | `ACESSO_NEGADO`                                            |
-| 404    | Recurso ou rota inexistente                               | `ROTA_NAO_ENCONTRADA`, `TURMA_NAO_ENCONTRADA`              |
-| 409    | Conflito com dados existentes (duplicidade)               | `REGISTRO_DUPLICADO`, `JA_MATRICULADO_NA_TURMA`            |
-| 422    | Entrada válida, mas recusada por regra de negócio         | `TURMA_LOTADA`, `DISCIPLINA_JA_APROVADA`                   |
-| 500    | Erro inesperado (sem detalhes internos na resposta)       | `ERRO_INTERNO`                                             |
+| Status | Quando                                                    | Exemplos de `code`                                                        |
+| ------ | --------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 400    | Entrada mal formada (tipo, formato, campo faltando, JSON) | `VALIDACAO`, `JSON_INVALIDO`                                              |
+| 401    | Não autenticado                                           | `TOKEN_AUSENTE`, `TOKEN_EXPIRADO`, `CREDENCIAIS_INVALIDAS`                |
+| 403    | Autenticado, mas com perfil sem acesso                    | `ACESSO_NEGADO`                                                           |
+| 404    | Recurso ou rota inexistente                               | `ROTA_NAO_ENCONTRADA`, `TURMA_NAO_ENCONTRADA`                             |
+| 409    | Conflito com dados existentes (duplicidade)               | `CODIGO_DUPLICADO`, `EMAIL_DUPLICADO`, `JA_MATRICULADO_NA_TURMA`          |
+| 422    | Entrada válida, mas recusada por regra de negócio         | `TURMA_LOTADA`, `DISCIPLINA_JA_APROVADA`, `VAGAS_ABAIXO_DOS_MATRICULADOS` |
+| 500    | Erro inesperado (sem detalhes internos na resposta)       | `ERRO_INTERNO`                                                            |
 
 ### Listagens: busca e paginação
 
@@ -324,21 +342,21 @@ Os testes verificam **comportamento**, não implementação: cada caso diz o que
 
 ### Rastreabilidade das regras de negócio
 
-| #   | Regra                                                  | Onde está implementada                                                                    | Testes                                                                                                                     |
-| --- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Código da disciplina é único                           | `UNIQUE` em `disciplinas.codigo` (validação na API na Fase 7)                             | `restricoes-banco.test.ts`                                                                                                 |
-| 2   | CH múltipla de 15, entre 15h e 120h                    | `CHECK disciplinas_ch_check` (validação na API na Fase 7)                                 | `restricoes-banco.test.ts` (10, 20, 125, 0, −15, 135 recusadas; 15, 60, 120 aceitas)                                       |
-| 3   | E-mail do professor é único                            | `UNIQUE` em `professores.email` (validação na API na Fase 7)                              | `restricoes-banco.test.ts`                                                                                                 |
-| 4   | Turma tem disciplina, professor e ≥ 1 vaga             | FKs `NOT NULL` + `CHECK turmas_vagas_check` (validação na API na Fase 7)                  | `restricoes-banco.test.ts`                                                                                                 |
-| 5   | Vagas nunca abaixo dos matriculados                    | Fase 7 (alteração de vagas pela secretaria)                                               | Fase 7                                                                                                                     |
-| 6   | Não matricular em turma lotada                         | `aluno.service.ts` → `matricular` (com `SELECT ... FOR UPDATE`)                           | `aluno.service.test.ts`, `aluno.test.ts` (inclui teste determinístico do lock), `fluxo-completo.test.ts`                   |
-| 7   | Não matricular em disciplina aprovada (reprovada pode) | `aluno.service.ts` → `matricular`                                                         | `aluno.service.test.ts`, `aluno.test.ts`                                                                                   |
-| 8   | Cancelar matrícula ativa devolve a vaga                | `aluno.service.ts` → `cancelarMatricula` + update condicional; vagas = contagem de ativas | `aluno.service.test.ts`, `aluno.test.ts`, `fluxo-completo.test.ts`                                                         |
-| 9   | Aluno só vê e altera as próprias matrículas            | `getAlunoId` (aluno vem do token) + consultas filtradas por aluno                         | `aluno.service.test.ts`, `aluno.test.ts` (404 para matrícula alheia, `alunoId` no corpo ignorado), `http-pipeline.test.ts` |
-| 10  | Classificação depende do curso do aluno                | `classificacao.ts`                                                                        | `progresso.test.ts`, `aluno.test.ts` (ofertas e progresso de alunos de cursos diferentes)                                  |
-| 11  | Excedente de eletiva de perfil conta como livre        | `progresso.ts`                                                                            | `progresso.test.ts`                                                                                                        |
-| 12  | Só aprovadas integralizam; ativas = em curso           | `progresso.ts` + `aluno.service.ts` → `progresso` (só `APROVADO` e matrículas `ATIVA`)    | `progresso.test.ts`, `aluno.test.ts`, `fluxo-completo.test.ts`                                                             |
-| 13  | Percentual ≤ 100% e faltante ≥ 0                       | `progresso.ts`                                                                            | `progresso.test.ts`                                                                                                        |
+| #   | Regra                                                  | Onde está implementada                                                                              | Testes                                                                                                                                |
+| --- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Código da disciplina é único                           | `UNIQUE` em `disciplinas.codigo`, traduzido em 409 `CODIGO_DUPLICADO` no `secretaria.service.ts`    | `restricoes-banco.test.ts`, `secretaria.test.ts` (cadastro e edição), `telas-secretaria.test.tsx`                                     |
+| 2   | CH múltipla de 15, entre 15h e 120h                    | `chSchema` (400) em `secretaria.schemas.ts` + `CHECK disciplinas_ch_check`; validação no formulário | `restricoes-banco.test.ts`, `secretaria.test.ts` (10, 20, 125, 0, 7,5 recusadas; 15, 60, 120 aceitas), `telas-secretaria.test.tsx`    |
+| 3   | E-mail do professor é único                            | `UNIQUE` em `professores.email` (e-mail em minúsculas), 409 `EMAIL_DUPLICADO`                       | `restricoes-banco.test.ts`, `secretaria.test.ts` (inclusive com maiúsculas diferentes), `telas-secretaria.test.tsx`                   |
+| 4   | Turma tem disciplina, professor e ≥ 1 vaga             | `turmaSchema` (400) + `abrirTurma` (422 se não existem) + FKs e `CHECK turmas_vagas_check`          | `restricoes-banco.test.ts`, `secretaria.test.ts`, `telas-secretaria.test.tsx`                                                         |
+| 5   | Vagas nunca abaixo dos matriculados                    | `secretaria.service.ts` → `alterarVagas` (com `SELECT ... FOR UPDATE`); mínimo no formulário        | `secretaria.test.ts` (menor recusado, igual aceito, canceladas não contam, teste determinístico do lock), `telas-secretaria.test.tsx` |
+| 6   | Não matricular em turma lotada                         | `aluno.service.ts` → `matricular` (com `SELECT ... FOR UPDATE`)                                     | `aluno.service.test.ts`, `aluno.test.ts` (inclui teste determinístico do lock), `fluxo-completo.test.ts`                              |
+| 7   | Não matricular em disciplina aprovada (reprovada pode) | `aluno.service.ts` → `matricular`                                                                   | `aluno.service.test.ts`, `aluno.test.ts`                                                                                              |
+| 8   | Cancelar matrícula ativa devolve a vaga                | `aluno.service.ts` → `cancelarMatricula` + update condicional; vagas = contagem de ativas           | `aluno.service.test.ts`, `aluno.test.ts`, `fluxo-completo.test.ts`                                                                    |
+| 9   | Aluno só vê e altera as próprias matrículas            | `getAlunoId` (aluno vem do token) + consultas filtradas por aluno                                   | `aluno.service.test.ts`, `aluno.test.ts` (404 para matrícula alheia, `alunoId` no corpo ignorado), `http-pipeline.test.ts`            |
+| 10  | Classificação depende do curso do aluno                | `classificacao.ts`                                                                                  | `progresso.test.ts`, `aluno.test.ts` (ofertas e progresso de alunos de cursos diferentes)                                             |
+| 11  | Excedente de eletiva de perfil conta como livre        | `progresso.ts`                                                                                      | `progresso.test.ts`                                                                                                                   |
+| 12  | Só aprovadas integralizam; ativas = em curso           | `progresso.ts` + `aluno.service.ts` → `progresso` (só `APROVADO` e matrículas `ATIVA`)              | `progresso.test.ts`, `aluno.test.ts`, `fluxo-completo.test.ts`                                                                        |
+| 13  | Percentual ≤ 100% e faltante ≥ 0                       | `progresso.ts`                                                                                      | `progresso.test.ts`                                                                                                                   |
 
 ### Front-end: React + Vite + TypeScript
 
@@ -388,6 +406,24 @@ Ao trocar de página, a lista anterior continua na tela até a nova chegar (`kee
 
 Verificado manualmente no navegador em **360×780**, nos temas claro e escuro: login, busca, matrícula, cancelamento com confirmação e progresso, **sem rolagem horizontal** em nenhuma das telas.
 
+### Secretaria (desktop)
+
+- **Disciplinas** — tabela com busca e paginação na URL; cadastro e edição em janela.
+- **Professores** — tabela com busca e paginação; cadastro em janela.
+- **Turmas** — tabela com vagas **ocupadas / total** (turma lotada destacada); abrir turma com selects de disciplina e professor; alterar vagas mostrando quantos estão matriculados e o mínimo permitido.
+
+Os **formulários validam antes de enviar**, espelhando o back-end (CH múltipla de 15 entre 15 e 120, e-mail válido, vagas ≥ 1 e ≥ matriculados), para dar retorno imediato sem ida ao servidor. A API valida de novo e é quem decide: recusas ligadas a um campo (código ou e-mail duplicado, vagas abaixo dos matriculados porque alguém se matriculou com a janela aberta) aparecem **embaixo do campo**; erros sem campo aparecem no formulário. Cada campo liga rótulo, ajuda e erro por `aria-describedby`.
+
+Os selects do formulário de turma carregam até 50 disciplinas e 50 professores (o limite de `pageSize` da API). Com um catálogo maior, o certo seria um campo com busca (autocomplete).
+
+### Decisões da secretaria
+
+- **Unicidade pelo banco, sem consultar antes**: em vez de "existe? então recusa; senão insere" (que deixa uma janela para duas requisições simultâneas com o mesmo código), o service tenta inserir e traduz a violação do `UNIQUE` em 409 com mensagem clara.
+- **O código da disciplina pode ser editado**, desde que continue único: as tabelas se referem à disciplina pelo `id`, então mudar o código não quebra turmas nem histórico, e permite corrigir um erro de digitação. Alterar a CH de uma disciplina muda o progresso de quem já a cursou, porque o progresso é calculado na hora (não há CH copiada no histórico) — com mais tempo, eu guardaria a CH no histórico no momento da aprovação.
+- **Disciplina ou professor inexistente ao abrir turma responde 422**, não 404: a rota existe; o que está errado é uma referência dentro do corpo.
+- **Regra 5 com o mesmo lock da matrícula**: alterar vagas trava a turma (`SELECT ... FOR UPDATE`) antes de contar os matriculados. Assim, uma matrícula simultânea não entra entre a contagem e a atualização. Há um teste determinístico para isso, e removendo o lock ele falha.
+- **Validação de CH com uma única mensagem**: "múltipla de 15, entre 15h e 120h (ex.: 30, 45, 60)", em vez de várias mensagens parciais para o mesmo valor.
+
 ## Status
 
 | Fase | Descrição                    | Status       |
@@ -399,6 +435,6 @@ Verificado manualmente no navegador em **360×780**, nos temas claro e escuro: l
 | 4    | Testes das regras de negócio | ✅ Concluída |
 | 5    | Front-end base               | ✅ Concluída |
 | 6    | Front-end do aluno           | ✅ Concluída |
-| 7    | Secretaria                   | ⏳ A fazer   |
+| 7    | Secretaria                   | ✅ Concluída |
 | 8    | Requisito à escolha          | ⏳ A fazer   |
 | 9    | Documentação final           | ⏳ A fazer   |

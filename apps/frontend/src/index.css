@@ -658,6 +658,97 @@ a {
   font-weight: 600;
 }
 
+/* --- Formulários em janela ---------------------------------------------- */
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-4);
+}
+
+.formulario .dialogo__acoes {
+  margin-top: 0;
+}
+
+.formulario p {
+  margin: 0;
+}
+
+.campo label {
+  font-weight: 500;
+}
+
+.campo__ajuda {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--cor-texto-suave);
+}
+
+.campo__erro {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--cor-erro);
+}
+
+.campo [aria-invalid='true'] {
+  border-color: var(--cor-erro);
+}
+
+/* --- Tabelas (secretaria, desktop) -------------------------------------- */
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+}
+
+.tabela th,
+.tabela td {
+  padding: var(--espaco-3) var(--espaco-4);
+  text-align: left;
+  border-bottom: 1px solid var(--cor-borda);
+  vertical-align: middle;
+}
+
+.tabela th {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+}
+
+.tabela tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.tabela tbody tr:hover {
+  background: var(--cor-fundo);
+}
+
+.tabela__numero {
+  text-align: right !important;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabela__acoes {
+  text-align: right !important;
+  white-space: nowrap;
+  width: 1%;
+}
+
+.etiqueta-lotada {
+  margin-left: var(--espaco-2);
+  padding: 1px var(--espaco-2);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--cor-erro-fundo);
+  color: var(--cor-erro);
+}
+
 /* --- Telas maiores ------------------------------------------------------ */
 
 @media (min-width: 640px) {

@@ -4,9 +4,11 @@ import { AppLayout } from './layouts/AppLayout';
 import { MatriculasPage } from './pages/aluno/MatriculasPage';
 import { OfertasPage } from './pages/aluno/OfertasPage';
 import { ProgressoPage } from './pages/aluno/ProgressoPage';
-import { EmConstrucao } from './pages/EmConstrucao';
 import { LoginPage } from './pages/LoginPage';
 import { NaoEncontrada } from './pages/NaoEncontrada';
+import { DisciplinasPage } from './pages/secretaria/DisciplinasPage';
+import { ProfessoresPage } from './pages/secretaria/ProfessoresPage';
+import { TurmasPage } from './pages/secretaria/TurmasPage';
 
 /**
  * Mapa de rotas. Exportado como array para que os testes montem o mesmo mapa
@@ -56,9 +58,9 @@ export const routes: RouteObject[] = [
         ),
         children: [
           { index: true, element: <Navigate to="disciplinas" replace /> },
-          { path: 'disciplinas', element: <EmConstrucao titulo="Disciplinas" /> },
-          { path: 'professores', element: <EmConstrucao titulo="Professores" /> },
-          { path: 'turmas', element: <EmConstrucao titulo="Turmas" /> },
+          { path: 'disciplinas', element: <DisciplinasPage /> },
+          { path: 'professores', element: <ProfessoresPage /> },
+          { path: 'turmas', element: <TurmasPage /> },
         ],
       },
     ],

@@ -68,7 +68,9 @@ describe('Ofertas', () => {
     await screen.findByRole('heading', { name: /IF676/ });
 
     expect(within(cartaoDe('IF676')).getByText(/Turma lotada/)).toBeInTheDocument();
-    expect(within(cartaoDe('IF676')).getByRole('button', { name: /Sem vagas/ })).toBeDisabled();
+    expect(
+      within(cartaoDe('IF676')).getByRole('button', { name: 'Sem vagas em IF676' }),
+    ).toBeDisabled();
     expect(within(cartaoDe('LE500')).getByText(/Matriculado/)).toBeInTheDocument();
     expect(within(cartaoDe('IF668')).getByText('Já aprovado')).toBeInTheDocument();
     expect(within(cartaoDe('IF668')).queryByRole('button')).not.toBeInTheDocument();
@@ -86,7 +88,9 @@ describe('Ofertas', () => {
     renderApp('/aluno/ofertas', { sessao: sessaoAluno });
     await screen.findByRole('heading', { name: /IF671/ });
 
-    await userEvent.click(within(cartaoDe('IF671')).getByRole('button', { name: /Matricular/ }));
+    await userEvent.click(
+      within(cartaoDe('IF671')).getByRole('button', { name: 'Matricular em IF671' }),
+    );
 
     expect(await screen.findByText('Matrícula realizada.')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST')?.corpo).toEqual({ turmaId: 1 });
@@ -108,7 +112,9 @@ describe('Ofertas', () => {
     renderApp('/aluno/ofertas', { sessao: sessaoAluno });
     await screen.findByRole('heading', { name: /IF671/ });
 
-    await userEvent.click(within(cartaoDe('IF671')).getByRole('button', { name: /Matricular/ }));
+    await userEvent.click(
+      within(cartaoDe('IF671')).getByRole('button', { name: 'Matricular em IF671' }),
+    );
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Esta turma não tem mais vagas disponíveis.',
@@ -193,7 +199,9 @@ describe('Minhas matrículas', () => {
     });
     renderApp('/aluno/matriculas', { sessao: sessaoAluno });
 
-    await userEvent.click(await screen.findByRole('button', { name: /Cancelar matrícula/ }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Cancelar matrícula em IF671' }),
+    );
     const dialogo = screen.getByRole('alertdialog', { name: 'Cancelar matrícula?' });
     expect(dialogo).toHaveTextContent('IF671 — Banco de Dados');
 
@@ -214,7 +222,9 @@ describe('Minhas matrículas', () => {
     });
     renderApp('/aluno/matriculas', { sessao: sessaoAluno });
 
-    await userEvent.click(await screen.findByRole('button', { name: /Cancelar matrícula/ }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Cancelar matrícula em IF671' }),
+    );
     await userEvent.click(
       within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancelar matrícula' }),
     );

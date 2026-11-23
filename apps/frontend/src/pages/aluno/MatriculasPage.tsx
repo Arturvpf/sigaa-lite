@@ -60,9 +60,9 @@ export function MatriculasPage() {
                       type="button"
                       className="botao botao--perigo-contorno"
                       onClick={() => setACancelar(matricula)}
+                      aria-label={`Cancelar matrícula em ${disciplina.codigo}`}
                     >
                       Cancelar matrícula
-                      <span className="visualmente-oculto"> em {disciplina.codigo}</span>
                     </button>
                   </div>
                 </li>
