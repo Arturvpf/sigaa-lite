@@ -30,6 +30,8 @@ export interface OfertaDTO {
   matriculaId: number | null;
   /** O aluno já foi aprovado nesta disciplina (não pode se matricular — regra 7). */
   jaAprovado: boolean;
+  /** Pré-requisitos da disciplina e se o aluno já os tem aprovados (requisito à escolha). */
+  preRequisitos: { id: number; codigo: string; nome: string; atendido: boolean }[];
 }
 
 export interface MatriculaDTO {
@@ -68,9 +70,10 @@ export function createAlunoService(deps: { repo: AlunoRepository }) {
       const items: OfertaDTO[] = turmas.map((turma) => {
         const vagasOcupadas = turma._count.matriculas;
         const vagasDisponiveis = Math.max(0, turma.vagas - vagasOcupadas);
+        const { preRequisitos, ...disciplina } = turma.disciplina;
         return {
           id: turma.id,
-          disciplina: turma.disciplina,
+          disciplina,
           professor: turma.professor,
           vagas: turma.vagas,
           vagasOcupadas,
@@ -79,6 +82,10 @@ export function createAlunoService(deps: { repo: AlunoRepository }) {
           classificacao: classificar(turma.disciplina.id, estrutura),
           matriculaId: matriculaPorTurma.get(turma.id) ?? null,
           jaAprovado: disciplinasAprovadas.has(turma.disciplina.id),
+          preRequisitos: preRequisitos.map(({ preRequisito }) => ({
+            ...preRequisito,
+            atendido: disciplinasAprovadas.has(preRequisito.id),
+          })),
         };
       });
 
@@ -129,6 +136,18 @@ export function createAlunoService(deps: { repo: AlunoRepository }) {
           throw new BusinessRuleError(
             'JA_MATRICULADO_NA_DISCIPLINA',
             'Você já está matriculado em outra turma desta disciplina.',
+          );
+        }
+
+        // Requisito à escolha: todos os pré-requisitos precisam estar aprovados.
+        // Vem antes de "lotada" para o aluno saber o que realmente o impede.
+        const pendentes = await tx.listarPreRequisitosPendentes(alunoId, turma.disciplinaId);
+        if (pendentes.length > 0) {
+          const codigos = pendentes.map((p) => p.codigo).join(', ');
+          throw new BusinessRuleError(
+            'PRE_REQUISITO_PENDENTE',
+            `Você precisa ser aprovado antes em: ${codigos}.`,
+            { pendentes },
           );
         }
 
