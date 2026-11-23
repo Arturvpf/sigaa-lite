@@ -43,6 +43,7 @@ describe('disciplinas', () => {
       codigo: 'IF668',
       nome: 'Introdução à Programação',
       ch: 60,
+      preRequisitos: [],
     });
   });
 
