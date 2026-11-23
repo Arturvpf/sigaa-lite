@@ -92,8 +92,10 @@ describe('Ofertas', () => {
     await userEvent.click(
       within(cartaoDe('IF671')).getByRole('button', { name: 'Matricular em IF671' }),
     );
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar matrícula' }));
 
     expect(await screen.findByText('Matrícula realizada.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST')?.corpo).toEqual({ turmaId: 1 });
     await waitFor(() => expect(buscas).toBe(2));
   });
@@ -116,6 +118,7 @@ describe('Ofertas', () => {
     await userEvent.click(
       within(cartaoDe('IF671')).getByRole('button', { name: 'Matricular em IF671' }),
     );
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar matrícula' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Esta turma não tem mais vagas disponíveis.',
